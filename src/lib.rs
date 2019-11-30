@@ -30,7 +30,7 @@ impl SecurityDevice {
         // TODO
 
         // 2. Decode and validate client_data_json
-        let client_data = form.get_client_data()?;
+        let (client_data, client_data_hash) = form.get_client_data()?;
         if !client_data.validate(
             "webauthn.create",
             "s0Tnjjv67CzQxIdneKXRPrUYGyUjuZQJr17fRPkvdoA",
@@ -44,7 +44,7 @@ impl SecurityDevice {
 
         // 4. Decode the CBOR-encdoded attestation data
         let attestation_data = form.get_attestation_data()?;
-        attestation_data.validate();
+        attestation_data.validate(client_data_hash);
 
         Ok(())
     }

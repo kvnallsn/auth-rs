@@ -1,11 +1,14 @@
 //! Parses COSE standards data
 
 mod constants;
-mod key;
+pub mod key;
 
 pub use self::key::CoseKey;
 
-use std::{error::Error, fmt};
+use serde_cbor::Value;
+use std::{collections::BTreeMap, error::Error, fmt};
+
+pub type CoseMap = BTreeMap<i32, Value>;
 
 #[derive(Clone, Debug)]
 #[allow(dead_code)]

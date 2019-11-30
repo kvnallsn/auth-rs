@@ -2,9 +2,11 @@
 
 mod algorithm;
 
-use self::algorithm::CoseKeyAlgorithm;
-use crate::common::cose::{constants::*, CoseError};
+pub use self::algorithm::CoseKeyAlgorithm;
+use crate::common::cose::{constants::*, CoseError, CoseMap};
+use serde::Deserialize;
 use serde_cbor::Value;
+use serde_repr::Deserialize_repr;
 use std::default::Default;
 
 /// For each of the key types, we define both public and private members.
@@ -18,12 +20,13 @@ use std::default::Default;
 ///
 /// Key types are identified by the 'kty' member of the COSE_Key object.
 /// In this document, we define four values for the member:
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize_repr)]
+#[repr(u8)]
 pub enum CoseKeyType {
-    Reserved,
-    OKP,
-    EC2,
-    Symmetric,
+    Reserved = 0,
+    OKP = 1,
+    EC2 = 2,
+    Symmetric = 4,
 }
 
 impl CoseKeyType {
@@ -31,13 +34,14 @@ impl CoseKeyType {
     ///
     /// # Argument
     /// * `value` - The CBOR encoded value
-    pub fn from_cbor(value: &Value) -> Result<CoseKeyType, CoseError> {
-        match value {
-            Value::Integer(i) => match i {
-                &COSE_KEY_KTY_RESERVED => Ok(CoseKeyType::Reserved),
-                &COSE_KEY_KTY_OKP => Ok(CoseKeyType::OKP),
-                &COSE_KEY_KTY_EC2 => Ok(CoseKeyType::EC2),
-                &COSE_KEY_KTY_SYMMETRIC => Ok(CoseKeyType::Symmetric),
+    pub fn from_cbor(map: &CoseMap) -> Result<CoseKeyType, CoseError> {
+        let kty = map.get(&COSE_KEY_KTY).ok_or(CoseError::MissingFields)?;
+        match kty {
+            Value::Integer(i) => match *i as i32 {
+                COSE_KEY_KTY_RESERVED => Ok(CoseKeyType::Reserved),
+                COSE_KEY_KTY_OKP => Ok(CoseKeyType::OKP),
+                COSE_KEY_KTY_EC2 => Ok(CoseKeyType::EC2),
+                COSE_KEY_KTY_SYMMETRIC => Ok(CoseKeyType::Symmetric),
                 _ => Err(CoseError::UnknownKey(format!("{}", i))),
             },
             _ => Err(CoseError::InvalidType("cose.kty")),
@@ -45,7 +49,7 @@ impl CoseKeyType {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Deserialize)]
 struct CoseKeyBuilder {
     kty: Option<CoseKeyType>,
     kid: Option<i32>,
@@ -88,29 +92,25 @@ impl CoseKeyBuilder {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct CoseKey {
-    kty: CoseKeyType,
-    kid: Option<i32>,
-    alg: CoseKeyAlgorithm,
-    key_ops: Option<i32>,
-    iv: Option<i32>,
+    pub kty: CoseKeyType,
+
+    pub kid: Option<i32>,
+
+    pub alg: CoseKeyAlgorithm,
+
+    pub key_ops: Option<i32>,
+
+    pub iv: Option<i32>,
 }
 
 impl CoseKey {
     pub fn parse(data: &[u8]) -> Result<CoseKey, Box<dyn std::error::Error>> {
+        let cose: CoseMap = serde_cbor::from_slice(&data)?;
         let mut builder = CoseKeyBuilder::default();
-        let cbor = serde_cbor::from_slice::<serde_cbor::Value>(&data)?;
-        if let serde_cbor::Value::Map(cose) = cbor {
-            // attempt to read key type (KTY) - required field
-            let kty = cose
-                .get(&Value::Integer(COSE_KEY_KTY))
-                .ok_or(CoseError::MissingFields)?;
-
-            builder.set_key_type(CoseKeyType::from_cbor(kty)?);
-
-            builder.set_algo(CoseKeyAlgorithm::from_cbor(&cose)?);
-        }
+        builder.set_key_type(CoseKeyType::from_cbor(&cose)?);
+        builder.set_algo(CoseKeyAlgorithm::from_cbor(&cose)?);
         Ok(builder.finish()?)
     }
 }

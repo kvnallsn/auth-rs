@@ -1,26 +1,25 @@
 //! ES256 algorithm details
 
-use crate::common::cose::{constants::*, CoseError};
+use crate::common::cose::{constants::*, CoseError, CoseMap};
+use serde::Deserialize;
 use serde_cbor::Value;
-use std::collections::BTreeMap;
 
 /// Different Elliptic Curves that may be represented
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
+#[repr(u8)]
 pub enum Curve {
-    P256,
-    P384,
-    P512,
-    X25519,
-    X448,
-    Ed25519,
-    Ed448,
+    P256 = 1,
+    P384 = 2,
+    P512 = 3,
+    X25519 = 4,
+    X448 = 5,
+    Ed25519 = 6,
+    Ed448 = 7,
 }
 
 impl Curve {
-    pub fn from_cbor(map: &BTreeMap<Value, Value>) -> Result<Curve, CoseError> {
-        let crv = map
-            .get(&Value::Integer(COSE_KEY_EC2_CRV))
-            .ok_or(CoseError::MissingFields)?;
+    pub fn from_cbor(map: &CoseMap) -> Result<Curve, CoseError> {
+        let crv = map.get(&COSE_KEY_EC2_CRV).ok_or(CoseError::MissingFields)?;
 
         match crv {
             Value::Integer(i) => match i {
@@ -38,21 +37,21 @@ impl Curve {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct ES256Params {
-    pub crv: Curve,
-    pub x: Option<Vec<u8>>,
-    pub y: Option<Vec<u8>>,
-    pub d: Option<Vec<u8>>,
+    crv: Curve,
+    x: Option<Vec<u8>>,
+    y: Option<Vec<u8>>,
+    d: Option<Vec<u8>>,
 }
 
 impl ES256Params {
     /// Builds the ES256 params by parsing the BTreeMap
-    pub fn from_cbor(map: &BTreeMap<Value, Value>) -> Result<ES256Params, CoseError> {
+    pub fn from_cbor(map: &CoseMap) -> Result<ES256Params, CoseError> {
         let crv = Curve::from_cbor(map)?;
-        let x = map.get(&Value::Integer(COSE_KEY_EC2_X));
-        let y = map.get(&Value::Integer(COSE_KEY_EC2_Y));
-        let d = map.get(&Value::Integer(COSE_KEY_EC2_D));
+        let x = map.get(&COSE_KEY_EC2_X);
+        let y = map.get(&COSE_KEY_EC2_Y);
+        let d = map.get(&COSE_KEY_EC2_D);
 
         // Note: we don't use map here because if the value isn't bytes, then we have
         // and invalid type
@@ -80,6 +79,58 @@ impl ES256Params {
             None => None,
         };
 
+        let is_public = d.is_some();
+        let is_private = x.is_some() && y.is_some();
+
+        if !is_public && !is_private {
+            // Key has to be at least public or private
+            return Err(CoseError::MissingFields);
+        }
+
         Ok(ES256Params { crv, x, y, d })
+    }
+
+    /// Converts this public key into a the X962 RAW format
+    pub fn as_x962_raw(self) -> Option<Vec<u8>> {
+        if let Some(mut x) = self.x {
+            if let Some(mut y) = self.y {
+                let mut raw = vec![0x04];
+                raw.append(&mut x);
+                raw.append(&mut y);
+                return Some(raw);
+            }
+        }
+
+        None
+    }
+
+    /// Returns the public key components (if they exists), else None
+    pub fn get_public(&self) -> Option<(&[u8], &[u8])> {
+        if let Some(ref x) = self.x {
+            if let Some(ref y) = self.y {
+                return Some((x, y));
+            }
+        }
+
+        None
+    }
+
+    /// Returns the private key components (if they exists), else None
+    pub fn get_private(&self) -> Option<&[u8]> {
+        self.d.as_ref().map(|d| d.as_slice())
+    }
+
+    /// Returns true if these ES256 parameters contain a private key (i.e., d is not None)
+    ///
+    /// If this method returns true, then `unwrap()` can be successfully called on d
+    pub fn is_public(&self) -> bool {
+        self.d.is_some()
+    }
+
+    /// Returns true if these ES256 parameters contain a public key (i.e., x and y are not None)
+    ///
+    /// If this method returns true, then `unwrap()` can be successfully called on x and y
+    pub fn is_private(&self) -> bool {
+        self.x.is_some() && self.y.is_some()
     }
 }

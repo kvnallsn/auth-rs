@@ -65,7 +65,6 @@ impl AttestationAuthData {
         cred_id.extend_from_slice(&data[55..cred_id_end]);
 
         let key = CoseKey::parse(&data[cred_id_end..])?;
-        println!("{:?}", key);
 
         Ok(AttestationAuthData {
             rp_id_hash,

@@ -5,6 +5,7 @@ mod client_data;
 
 use attestation::AttestationData;
 use client_data::ClientData;
+use ring::digest::{digest, Digest, SHA256};
 use serde::Deserialize;
 
 /// A `WebAuthnResponse` is the result received from the browser/client
@@ -30,10 +31,14 @@ pub struct WebAuthnResponse {
 
 impl WebAuthnResponse {
     /// Returns the client data associated with this response
-    pub fn get_client_data(&self) -> Result<ClientData, Box<dyn std::error::Error>> {
+    pub fn get_client_data(&self) -> Result<(ClientData, Digest), Box<dyn std::error::Error>> {
         let decoded = base64::decode_config(&self.client_data_json, base64::URL_SAFE)?;
+
+        // Hash client data now
+        let hash = digest(&SHA256, &decoded);
+
         let data: ClientData = serde_json::from_slice(&decoded)?;
-        Ok(data)
+        Ok((data, hash))
     }
 
     /// Returns the attestation data assocated with this response

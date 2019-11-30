@@ -7,6 +7,7 @@ use self::{
     auth_data::{AttestationAuthData, AuthDataFlag},
     format::AttestationFormat,
 };
+use ring::digest::Digest;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -41,7 +42,7 @@ impl AttestationData {
     }
 
     /// Validates the data contained in this attestation object
-    pub fn validate(&self) {
+    pub fn validate(self, client_data_hash: Digest) {
         // Verify `self.auth_data.rp_id_hash` is the SHA256 hash of the expected RP ID
         // TODO
 
@@ -53,13 +54,10 @@ impl AttestationData {
         // if user verification is required, check for the user verification flag
         // TODO
 
-        // verify the `alg` parameter in the credential public key matches the
-        // alg attribute of one of the items in `options.pubKeyCredParams`
-        // TODO
-        let _ = self.fmt.get_cert();
-
         // Verify the attestation statement as specified by the attestation format
-        // TODO
+        if let Err(e) = self.fmt.validate(self.auth_data, client_data_hash) {
+            panic!("Attestation Failed: {:?}", e);
+        }
 
         // Verify the credentialId is not registered to another user
         // TODO

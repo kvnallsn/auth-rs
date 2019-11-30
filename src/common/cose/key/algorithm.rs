@@ -3,12 +3,13 @@
 mod es256;
 
 use self::es256::ES256Params;
-use crate::common::cose::{constants::*, CoseError};
+use crate::common::cose::{constants::*, CoseError, CoseMap};
+use serde::Deserialize;
 use serde_cbor::Value;
-use std::collections::BTreeMap;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 pub enum CoseKeyAlgorithm {
+    #[serde(alias = "-7")]
     ES256(ES256Params),
 }
 
@@ -17,13 +18,11 @@ impl CoseKeyAlgorithm {
     ///
     /// # Argument
     /// * `map` - Map of all values parsed from the CBOR attestation data
-    pub fn from_cbor(map: &BTreeMap<Value, Value>) -> Result<CoseKeyAlgorithm, CoseError> {
-        let value = map
-            .get(&Value::Integer(COSE_KEY_ALG))
-            .ok_or(CoseError::MissingFields)?;
+    pub fn from_cbor(map: &CoseMap) -> Result<CoseKeyAlgorithm, CoseError> {
+        let value = map.get(&COSE_KEY_ALG).ok_or(CoseError::MissingFields)?;
         match value {
-            Value::Integer(i) => match i {
-                &COSE_KEY_ALGO_ES256 => Ok(CoseKeyAlgorithm::ES256(ES256Params::from_cbor(map)?)),
+            Value::Integer(i) => match *i as i32 {
+                COSE_KEY_ALGO_ES256 => Ok(CoseKeyAlgorithm::ES256(ES256Params::from_cbor(map)?)),
                 _ => Err(CoseError::UnknownKey(format!("{}", i))),
             },
             _ => Err(CoseError::InvalidType("cose.alg")),
