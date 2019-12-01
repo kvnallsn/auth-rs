@@ -9,7 +9,6 @@ use serde_cbor::Value;
 
 #[derive(Clone, Debug, Deserialize)]
 pub enum CoseKeyAlgorithm {
-    #[serde(alias = "-7")]
     ES256(ES256Params),
 }
 
