@@ -4,7 +4,7 @@ mod attestation;
 mod authenticator;
 
 use self::{attestation::AttestationPreference, authenticator::AuthenticatorCritera};
-use crate::common::{pk::PublicKeyParams, rp::RelyingParty, user::User};
+use crate::webauthn::{pk::PublicKeyParams, rp::RelyingParty, user::User};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
@@ -105,7 +105,7 @@ impl PublicKeyCreationOptions {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::{rp::RelyingParty, user::User};
+    use crate::webauthn::{RelyingParty, User};
 
     fn setup() -> (User, RelyingParty) {
         let user = User::new(vec![0, 1, 2, 3], "user", "user");

@@ -1,16 +1,12 @@
 //! FIDO2 WebAuthn implementation
 
 pub mod common;
-pub mod register;
 pub mod webauthn;
 
-use crate::{
-    common::{rp::RelyingParty, user::User},
-    webauthn::{
-        request::PublicKeyCreationOptions,
-        response::{WebAuthnResponse, WebAuthnType},
-        WebAuthnError,
-    },
+use crate::webauthn::{
+    request::PublicKeyCreationOptions,
+    response::{WebAuthnResponse, WebAuthnType},
+    RelyingParty, User, WebAuthnError,
 };
 
 pub struct SecurityDevice;
@@ -45,7 +41,7 @@ impl SecurityDevice {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::{rp::RelyingParty, user::User};
+    use crate::webauthn::{RelyingParty, User};
     use std::fs::File;
 
     fn setup() -> (User, RelyingParty) {

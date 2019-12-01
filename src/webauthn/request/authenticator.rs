@@ -1,6 +1,6 @@
 //! Authenticator Criteria
 
-use crate::common::user::UserVerificationRequirement;
+use crate::webauthn::user::UserVerificationRequirement;
 use serde::{Deserialize, Serialize};
 use std::default::Default;
 
