@@ -1,6 +1,6 @@
 //! Client data related code
 
-use crate::register::response::WebAuthnType;
+use crate::webauthn::response::WebAuthnType;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]

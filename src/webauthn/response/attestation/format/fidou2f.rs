@@ -2,7 +2,7 @@
 
 use crate::{
     common::cose::key::CoseKeyAlgorithm,
-    register::response::{attestation::auth_data::AttestationAuthData, AttestationError},
+    webauthn::response::{attestation::auth_data::AttestationAuthData, AttestationError},
 };
 use ring::digest::Digest;
 use serde::Deserialize;

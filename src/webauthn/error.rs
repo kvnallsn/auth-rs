@@ -1,6 +1,6 @@
 //! Top-Level WebAuthn Error
 
-use crate::register::response::AttestationError;
+use crate::webauthn::response::AttestationError;
 use base64::DecodeError;
 use std::fmt;
 

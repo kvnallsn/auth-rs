@@ -1,6 +1,6 @@
 //! Authentication Data contained in the Attestation Response
 
-use crate::{common::cose::CoseKey, register::response::AttestationError};
+use crate::{common::cose::CoseKey, webauthn::response::AttestationError};
 
 #[derive(Clone, Debug)]
 pub struct AttestationAuthData {
