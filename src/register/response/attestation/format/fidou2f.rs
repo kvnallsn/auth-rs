@@ -1,9 +1,8 @@
 //! FIDO-U2F Attestation Support
 
-use super::AttestationError;
 use crate::{
     common::cose::key::CoseKeyAlgorithm,
-    register::response::attestation::auth_data::AttestationAuthData,
+    register::response::{attestation::auth_data::AttestationAuthData, AttestationError},
 };
 use ring::digest::Digest;
 use serde::Deserialize;

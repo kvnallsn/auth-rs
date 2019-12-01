@@ -106,7 +106,7 @@ pub struct CoseKey {
 }
 
 impl CoseKey {
-    pub fn parse(data: &[u8]) -> Result<CoseKey, Box<dyn std::error::Error>> {
+    pub fn parse(data: &[u8]) -> Result<CoseKey, CoseError> {
         let cose: CoseMap = serde_cbor::from_slice(&data)?;
         let mut builder = CoseKeyBuilder::default();
         builder.set_key_type(CoseKeyType::from_cbor(&cose)?);

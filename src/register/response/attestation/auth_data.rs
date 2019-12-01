@@ -1,7 +1,6 @@
 //! Authentication Data contained in the Attestation Response
 
-use crate::common::cose::{CoseError, CoseKey};
-use serde::Deserialize;
+use crate::{common::cose::CoseKey, register::response::AttestationError};
 
 #[derive(Clone, Debug)]
 pub struct AttestationAuthData {
@@ -46,7 +45,7 @@ impl AttestationAuthData {
 }
 
 impl AttestationAuthData {
-    pub fn parse(data: Vec<u8>) -> Result<AttestationAuthData, Box<dyn std::error::Error>> {
+    pub fn parse(data: Vec<u8>) -> Result<AttestationAuthData, AttestationError> {
         let mut rp_id_hash = [0; 32];
         rp_id_hash.copy_from_slice(&data[..32]);
 

@@ -1,7 +1,10 @@
 //! FIDO2 WebAuthn implementation
 
 pub mod common;
+pub mod error;
 pub mod register;
+
+pub use self::error::WebAuthnError;
 
 use crate::{
     common::{rp::RelyingParty, user::User},

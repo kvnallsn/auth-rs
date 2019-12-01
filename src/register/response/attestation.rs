@@ -1,12 +1,15 @@
 //! Attestation Response Code
 
 mod auth_data;
+mod error;
 mod format;
 
+pub use self::error::AttestationError;
 use self::{
     auth_data::{AttestationAuthData, AuthDataFlag},
     format::AttestationFormat,
 };
+use crate::WebAuthnError;
 use ring::digest::Digest;
 use serde::Deserialize;
 
@@ -35,7 +38,7 @@ impl AttestationData {
     ///
     /// # Arguments
     /// * `data` - The base64url-decoded attestation_data field
-    pub fn parse(data: Vec<u8>) -> Result<AttestationData, Box<dyn std::error::Error>> {
+    pub fn parse(data: Vec<u8>) -> Result<AttestationData, WebAuthnError> {
         let inner = serde_cbor::from_slice::<AttestationResponseInner>(&data)?;
         let auth_data = AttestationAuthData::parse(inner.auth_data)?;
         Ok(AttestationData::new(inner.fmt, auth_data))
@@ -55,7 +58,12 @@ impl AttestationData {
         // TODO
 
         // Verify the attestation statement as specified by the attestation format
-        if let Err(e) = self.fmt.validate(self.auth_data, client_data_hash) {
+        let result = match self.fmt {
+            AttestationFormat::FidoU2f(fido) => fido.validate(self.auth_data, client_data_hash),
+            _ => Err(AttestationError::UnsupportedAttestationFormat),
+        };
+
+        if let Err(e) = result {
             panic!("Attestation Failed: {:?}", e);
         }
 

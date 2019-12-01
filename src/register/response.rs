@@ -3,6 +3,9 @@
 mod attestation;
 mod client_data;
 
+pub use self::attestation::AttestationError;
+use crate::WebAuthnError;
+
 use attestation::AttestationData;
 use client_data::ClientData;
 use ring::digest::{digest, Digest, SHA256};
@@ -31,7 +34,7 @@ pub struct WebAuthnResponse {
 
 impl WebAuthnResponse {
     /// Returns the client data associated with this response
-    pub fn get_client_data(&self) -> Result<(ClientData, Digest), Box<dyn std::error::Error>> {
+    pub fn get_client_data(&self) -> Result<(ClientData, Digest), WebAuthnError> {
         let decoded = base64::decode_config(&self.client_data_json, base64::URL_SAFE)?;
 
         // Hash client data now
@@ -42,9 +45,16 @@ impl WebAuthnResponse {
     }
 
     /// Returns the attestation data assocated with this response
-    pub fn get_attestation_data(&self) -> Result<AttestationData, Box<dyn std::error::Error>> {
+    pub fn get_attestation_data(&self) -> Result<AttestationData, WebAuthnError> {
         let decoded = base64::decode_config(&self.attestation_data, base64::STANDARD)?;
         let data = AttestationData::parse(decoded)?;
         Ok(data)
+    }
+
+    /// Validates this response
+    pub fn validate(&self) -> Result<(), WebAuthnError> {
+        let (client_data, hash) = self.get_client_data()?;
+        let att_data = self.get_attestation_data()?;
+        Ok(())
     }
 }
