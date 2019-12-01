@@ -13,6 +13,7 @@ pub struct AttestationAuthData {
     pub key: CoseKey,
 }
 
+#[allow(dead_code)]
 pub enum AuthDataFlag {
     /// Indicates if the user is present
     UserPresent,

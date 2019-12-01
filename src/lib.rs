@@ -8,7 +8,10 @@ pub use self::error::WebAuthnError;
 
 use crate::{
     common::{rp::RelyingParty, user::User},
-    register::{request::PublicKeyCreationOptions, response::WebAuthnResponse},
+    register::{
+        request::PublicKeyCreationOptions,
+        response::{WebAuthnResponse, WebAuthnType},
+    },
 };
 
 pub struct SecurityDevice;
@@ -28,28 +31,15 @@ impl SecurityDevice {
 
     /// Parses the response to a register request
     /// [Spec](https://w3c.github.io/webauthn/#sctn-registering-a-new-credential)
-    pub fn register(form: WebAuthnResponse) -> Result<(), Box<dyn std::error::Error>> {
-        // 1. Check to make sure response is an Authenticator Attestation Response
-        // TODO
-
-        // 2. Decode and validate client_data_json
-        let (client_data, client_data_hash) = form.get_client_data()?;
-        if !client_data.validate(
-            "webauthn.create",
+    ///
+    /// # Arguments
+    /// * `form` - Form received from the client
+    pub fn register(form: WebAuthnResponse) -> Result<(), WebAuthnError> {
+        form.validate(
+            WebAuthnType::Create,
             "s0Tnjjv67CzQxIdneKXRPrUYGyUjuZQJr17fRPkvdoA",
             "https://app.twinscroll.dev",
-        ) {
-            panic!("client data validation failed");
-        }
-
-        // 3. Hash base64url-encoded client_data_json with SHA256
-        // TODO
-
-        // 4. Decode the CBOR-encdoded attestation data
-        let attestation_data = form.get_attestation_data()?;
-        attestation_data.validate(client_data_hash);
-
-        Ok(())
+        )
     }
 }
 

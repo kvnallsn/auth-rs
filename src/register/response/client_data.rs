@@ -1,5 +1,6 @@
 //! Client data related code
 
+use crate::register::response::WebAuthnType;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -33,7 +34,7 @@ pub struct ClientData {
     /// member is to prevent certain types of signature confusion attacks
     /// (where an attacker substitutes one legitimate signature for another)
     #[serde(alias = "type")]
-    ty: String,
+    ty: WebAuthnType,
 
     /// Base64url-encoded challenge provided by theRelying Party
     challenge: String,
@@ -58,7 +59,7 @@ pub struct ClientData {
 
 impl ClientData {
     /// Ensures all criteria match what is anticipated
-    pub fn validate(&self, ty: &str, challenge: &str, origin: &str) -> bool {
+    pub fn validate(&self, ty: WebAuthnType, challenge: &str, origin: &str) -> bool {
         self.ty == ty && &self.challenge == challenge && &self.origin == origin
     }
 }

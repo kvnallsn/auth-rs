@@ -51,7 +51,7 @@ impl fmt::Display for AttestationError {
 }
 
 impl From<CoseError> for AttestationError {
-    fn from(e: CoseError) -> AttestationError {
+    fn from(_: CoseError) -> AttestationError {
         AttestationError::InvalidCoseKey
     }
 }

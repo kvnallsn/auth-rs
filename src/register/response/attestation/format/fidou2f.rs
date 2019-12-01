@@ -64,7 +64,7 @@ impl FidoU2fAttestation {
                 Some(r) => r,
                 None => return Err(AttestationError::BadCredentialPublicKey),
             },
-            _ => return Err(AttestationError::UnsupportedAlgorithm),
+            // _ => return Err(AttestationError::UnsupportedAlgorithm),
         };
 
         // Let verificationData be the concatenation of (0x00 || rpIdHash || clientDataHash ||

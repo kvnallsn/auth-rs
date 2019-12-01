@@ -45,7 +45,7 @@ impl AttestationData {
     }
 
     /// Validates the data contained in this attestation object
-    pub fn validate(self, client_data_hash: Digest) {
+    pub fn validate(self, client_data_hash: Digest) -> Result<(), AttestationError> {
         // Verify `self.auth_data.rp_id_hash` is the SHA256 hash of the expected RP ID
         // TODO
 
@@ -69,5 +69,7 @@ impl AttestationData {
 
         // Verify the credentialId is not registered to another user
         // TODO
+
+        Ok(())
     }
 }
