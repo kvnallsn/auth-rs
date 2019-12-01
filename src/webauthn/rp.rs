@@ -1,6 +1,7 @@
 //! Implementation of the Relying Party (aka server)
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// A `RelyingPartyBuilder` constructs a proper `RelyingParty` that can be
 /// send to a client for credential generation
@@ -72,6 +73,17 @@ impl RelyingParty {
     /// * `name` - Name of the company/app/program/etc.
     pub fn builder<S: Into<String>>(name: S) -> RelyingPartyBuilder {
         RelyingPartyBuilder::new(name)
+    }
+}
+
+impl fmt::Display for RelyingParty {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "[Relying Party] name = {}; id = {}",
+            self.name,
+            self.id.as_ref().map(|s| s.as_str()).unwrap_or("None"),
+        )
     }
 }
 
