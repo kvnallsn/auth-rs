@@ -2,6 +2,55 @@
 
 use serde::{Deserialize, Serialize};
 
+/// A `RelyingPartyBuilder` constructs a proper `RelyingParty` that can be
+/// send to a client for credential generation
+pub struct RelyingPartyBuilder {
+    /// Name of the RelyingParty (generally the name of the application or company)
+    rp_name: String,
+
+    /// The id that will be used to generate the credential.  By default, this will
+    /// be set to the effective domain of the server. (i.e., for www.example.com, the
+    /// effective domain is example.com).
+    ///
+    /// Before setting/overriding, read the warnings/notes in the [spec](https://w3c.github.io/webauthn/#relying-party)
+    rp_id: Option<String>,
+}
+
+impl RelyingPartyBuilder {
+    /// Creates a new RelyingPartyBuilder with the specified name
+    fn new<S: Into<String>>(name: S) -> RelyingPartyBuilder {
+        RelyingPartyBuilder {
+            rp_name: name.into(),
+            rp_id: None,
+        }
+    }
+    /// Updates the name on this RelyingParty to the value provided
+    pub fn name<S: Into<String>>(mut self, name: S) -> Self {
+        self.rp_name = name.into();
+        self
+    }
+
+    /// Overrides the default id (the server's effective domain).
+    ///
+    /// Before setting this, review the documention on RelyingParty's as
+    /// defined in the [WebAuthn Spec](https://w3c.github.io/webauthn/#relying-party)
+    ///
+    /// # Arguments
+    /// * `id` - The new RelyingParty id to use
+    pub fn id<S: Into<String>>(mut self, id: S) -> Self {
+        self.rp_id = Some(id.into());
+        self
+    }
+
+    /// Consumes this builder and returns the RelyingParty than can be sent to clients
+    pub fn finish(self) -> RelyingParty {
+        RelyingParty {
+            name: self.rp_name,
+            id: self.rp_id,
+        }
+    }
+}
+
 /// The RelyingParty in this instance is the name of the company
 /// (or application name/program name, etc.) that will bepresented
 /// to the user
@@ -12,6 +61,7 @@ pub struct RelyingParty {
     pub name: String,
 
     /// Generally the domain name of the service requesting authentication
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 }
 
@@ -20,23 +70,8 @@ impl RelyingParty {
     ///
     /// # Arguments
     /// * `name` - Name of the company/app/program/etc.
-    pub fn new<S: Into<String>>(name: S) -> RelyingParty {
-        RelyingParty {
-            name: name.into(),
-            id: None,
-        }
-    }
-}
-
-impl Into<RelyingParty> for String {
-    fn into(self) -> RelyingParty {
-        RelyingParty::new(self)
-    }
-}
-
-impl Into<RelyingParty> for &str {
-    fn into(self) -> RelyingParty {
-        RelyingParty::new(self)
+    pub fn builder<S: Into<String>>(name: S) -> RelyingPartyBuilder {
+        RelyingPartyBuilder::new(name)
     }
 }
 
@@ -46,6 +81,6 @@ mod tests {
 
     #[test]
     fn create_relying_party() {
-        let _ = RelyingParty::new("servername");
+        let _ = RelyingParty::builder("servername").finish();
     }
 }

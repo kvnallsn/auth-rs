@@ -46,7 +46,7 @@ mod tests {
 
     fn setup() -> (User, RelyingParty) {
         let user = User::new(vec![0], "user", "user");
-        let rp = "server".into();
+        let rp = RelyingParty::builder("rp").finish();
         (user, rp)
     }
 
