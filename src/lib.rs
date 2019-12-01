@@ -4,7 +4,7 @@ pub mod common;
 pub mod webauthn;
 
 use crate::webauthn::{
-    request::PublicKeyCreationOptions,
+    request::WebAuthnRegisterRequest,
     response::{WebAuthnResponse, WebAuthnType},
     RelyingParty, User, WebAuthnError,
 };
@@ -20,8 +20,8 @@ impl SecurityDevice {
     pub fn register_request<R: Into<RelyingParty>, U: Into<User>>(
         rp: R,
         user: U,
-    ) -> PublicKeyCreationOptions {
-        PublicKeyCreationOptions::new(rp, user)
+    ) -> WebAuthnRegisterRequest {
+        WebAuthnRegisterRequest::new(rp, user)
     }
 
     /// Parses the response to a register request

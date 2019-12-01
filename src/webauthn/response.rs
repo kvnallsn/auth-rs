@@ -66,8 +66,6 @@ impl WebAuthnResponse {
     /// Hashes the client data json received
     fn hash_client_data(&self) -> Result<Digest, WebAuthnError> {
         let decoded = base64::decode_config(&self.client_data_json, base64::URL_SAFE)?;
-
-        // Hash client data now
         let hash = digest(&SHA256, &decoded);
         Ok(hash)
     }

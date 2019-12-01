@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// `navigator.credentials.create()` on the client side.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PublicKeyCreationOptions {
+pub struct WebAuthnRegisterRequest {
     /// Random, cryptographically secure string used to generate client's attestation object
     challenge: Vec<u8>,
 
@@ -44,18 +44,18 @@ pub struct PublicKeyCreationOptions {
 }
 
 #[allow(dead_code)]
-impl PublicKeyCreationOptions {
+impl WebAuthnRegisterRequest {
     /// Creates a new options struct that can be sent to the client and generate
     /// a new client credential using the available authenticator.
     ///
     /// # Arguments
     /// * `rp` - Name of the Relying Party
     /// * `user` - The user to generate an attestation / credential for
-    pub fn new<P: Into<RelyingParty>, U: Into<User>>(rp: P, user: U) -> PublicKeyCreationOptions {
+    pub fn new<P: Into<RelyingParty>, U: Into<User>>(rp: P, user: U) -> Self {
         let mut challenge = vec![0; 32];
         rand::thread_rng().fill_bytes(&mut challenge);
 
-        PublicKeyCreationOptions {
+        WebAuthnRegisterRequest {
             challenge,
             rp: rp.into(),
             user: user.into(),
@@ -70,7 +70,7 @@ impl PublicKeyCreationOptions {
     ///
     /// # Arguments
     /// * `timeout` - Time, in milliseconds, to wait
-    pub fn set_timeout(mut self, timeout: u32) -> PublicKeyCreationOptions {
+    pub fn timeout<'a>(&'a mut self, timeout: u32) -> &'a mut Self {
         self.timeout = Some(timeout);
         self
     }
@@ -79,7 +79,7 @@ impl PublicKeyCreationOptions {
     ///
     /// # Arguments
     /// * `criteria` - Requirements for what authenticator should be used
-    pub fn set_auth_criteria(mut self, critera: AuthenticatorCritera) -> PublicKeyCreationOptions {
+    pub fn auth_criteria<'a>(&'a mut self, critera: AuthenticatorCritera) -> &'a mut Self {
         self.authenticator_selection = critera;
         self
     }
@@ -88,16 +88,13 @@ impl PublicKeyCreationOptions {
     ///
     /// # Arguments
     /// * `attestation` - New attestation preference
-    pub fn set_attestation(
-        mut self,
-        attestation: AttestationPreference,
-    ) -> PublicKeyCreationOptions {
+    pub fn attestation<'a>(&'a mut self, attestation: AttestationPreference) -> &'a mut Self {
         self.attestation = attestation;
         self
     }
 
     /// Placebo-method to show we are finished building
-    pub fn finish(self) -> PublicKeyCreationOptions {
+    pub fn finish(self) -> Self {
         self
     }
 }
@@ -116,35 +113,34 @@ mod tests {
     #[test]
     fn pk_create_options_default() {
         let (user, rp) = setup();
-        let _ = PublicKeyCreationOptions::new(rp, user);
+        let _ = WebAuthnRegisterRequest::new(rp, user);
     }
 
     #[test]
     fn pk_create_options_timeout() {
         let (user, rp) = setup();
-        let _ = PublicKeyCreationOptions::new(rp, user).set_timeout(10000);
+        let _ = WebAuthnRegisterRequest::new(rp, user).timeout(10000);
     }
 
     #[test]
     fn pk_create_options_auth_criteria() {
         let (user, rp) = setup();
-        let _ = PublicKeyCreationOptions::new(rp, user)
-            .set_auth_criteria(AuthenticatorCritera::default());
+        let _ =
+            WebAuthnRegisterRequest::new(rp, user).auth_criteria(AuthenticatorCritera::default());
     }
 
     #[test]
     fn pk_create_options_attestation() {
         let (user, rp) = setup();
-        let _ = PublicKeyCreationOptions::new(rp, user)
-            .set_attestation(AttestationPreference::Indirect);
+        let _ = WebAuthnRegisterRequest::new(rp, user).attestation(AttestationPreference::Indirect);
     }
 
     #[test]
     fn pk_create_options_all() {
         let (user, rp) = setup();
-        let _ = PublicKeyCreationOptions::new(rp, user)
-            .set_timeout(10010)
-            .set_attestation(AttestationPreference::Indirect)
-            .set_auth_criteria(AuthenticatorCritera::default());
+        let _ = WebAuthnRegisterRequest::new(rp, user)
+            .timeout(10010)
+            .attestation(AttestationPreference::Indirect)
+            .auth_criteria(AuthenticatorCritera::default());
     }
 }

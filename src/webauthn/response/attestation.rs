@@ -10,7 +10,7 @@ use self::{
     format::AttestationFormat,
 };
 use crate::WebAuthnError;
-use ring::digest::Digest;
+use ring::digest::{digest, Digest, SHA256};
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -47,6 +47,11 @@ impl AttestationData {
     /// Validates the data contained in this attestation object
     pub fn validate(self, client_data_hash: Digest) -> Result<(), AttestationError> {
         // Verify `self.auth_data.rp_id_hash` is the SHA256 hash of the expected RP ID
+        let rp_id = vec![];
+        let rp_id_hash = digest(&SHA256, &rp_id);
+        if self.auth_data.rp_id_hash != rp_id_hash.as_ref() {
+            panic!("")
+        }
         // TODO
 
         // Verify the `User Present` flag is set in `self.auth_data`
