@@ -27,12 +27,17 @@ impl SecurityDevice {
     /// [Spec](https://w3c.github.io/webauthn/#sctn-registering-a-new-credential)
     ///
     /// # Arguments
+    /// * `req - The register request to compare data against
     /// * `form` - Form received from the client
-    pub fn register(form: WebAuthnRegisterResponse) -> Result<(), WebAuthnError> {
+    pub fn register(
+        req: &WebAuthnRegisterRequest,
+        form: WebAuthnRegisterResponse,
+    ) -> Result<(), WebAuthnError> {
         form.validate(
             WebAuthnType::Create,
-            "s0Tnjjv67CzQxIdneKXRPrUYGyUjuZQJr17fRPkvdoA",
-            "https://app.twinscroll.dev",
+            req
+            //"s0Tnjjv67CzQxIdneKXRPrUYGyUjuZQJr17fRPkvdoA",
+            //"https://app.twinscroll.dev",
         )
     }
 }
@@ -62,17 +67,19 @@ mod tests {
     }
 
     #[test]
-    fn register_device_default() -> Result<(), Box<dyn std::error::Error>> {
+    fn register_device_json() -> Result<(), Box<dyn std::error::Error>> {
         let (user, rp) = setup();
-        let req = SecurityDevice::register_request(rp, user);
-        let _ = serde_json::to_string_pretty(&req)?;
+        let req = SecurityDevice::register_request(rp, user).json();
+        assert!(req.is_ok());
         Ok(())
     }
 
     #[test]
     fn register_device_response() -> Result<(), Box<dyn std::error::Error>> {
+        let (user, rp) = setup();
+        let req = SecurityDevice::register_request(rp, user);
         let resp = read_create_response()?;
-        SecurityDevice::register(resp)?;
+        SecurityDevice::register(&req, resp)?;
         Ok(())
     }
 }

@@ -1,7 +1,34 @@
 //! Client data related code
 
-use crate::webauthn::response::WebAuthnType;
+use crate::webauthn::{request::WebAuthnRegisterRequest, response::WebAuthnType};
 use serde::Deserialize;
+use std::fmt;
+
+#[derive(Debug)]
+pub enum ClientDataError {
+    /// Occurs when the response we received does not match the operation
+    /// we were expecting. For example, requested `webauthn.create` but got
+    /// a response for `webauthn.get`
+    InvalidWebAuthnType(WebAuthnType, WebAuthnType),
+
+    /// Occurs when the challenge we received does not match the challenge
+    /// we sent to the client
+    ChallengeMismatch,
+}
+
+impl fmt::Display for ClientDataError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let msg = match self {
+            ClientDataError::InvalidWebAuthnType(got, exp) => format!(
+                "WebAuthn Message Type Mismatch: Got '{}', Expected: '{}'",
+                got, exp
+            ),
+            ClientDataError::ChallengeMismatch => format!("Challenge Mismatch!"),
+        };
+
+        write!(f, "{}", msg)
+    }
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub enum TokenBindingStatus {
@@ -59,7 +86,19 @@ pub struct ClientData {
 
 impl ClientData {
     /// Ensures all criteria match what is anticipated
-    pub fn validate(&self, ty: WebAuthnType, challenge: &str, origin: &str) -> bool {
-        self.ty == ty && &self.challenge == challenge && &self.origin == origin
+    pub fn validate(
+        &self,
+        ty: WebAuthnType,
+        request: &WebAuthnRegisterRequest,
+    ) -> Result<(), ClientDataError> {
+        if self.ty != ty {
+            return Err(ClientDataError::InvalidWebAuthnType(self.ty.clone(), ty));
+        }
+
+        if self.challenge != request.challenge() {
+            return Err(ClientDataError::ChallengeMismatch);
+        }
+
+        Ok(())
     }
 }

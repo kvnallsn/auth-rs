@@ -4,7 +4,8 @@ mod attestation;
 mod client_data;
 
 pub use self::attestation::AttestationError;
-use crate::webauthn::{WebAuthnError, WebAuthnType};
+pub use self::client_data::ClientDataError;
+use crate::webauthn::{request::WebAuthnRegisterRequest, WebAuthnError, WebAuthnType};
 
 use attestation::AttestationData;
 use client_data::ClientData;
@@ -55,17 +56,16 @@ impl WebAuthnRegisterResponse {
     }
 
     /// Validates this response
-    pub fn validate<S: AsRef<str>, O: AsRef<str>>(
+    pub fn validate(
         &self,
         ty: WebAuthnType,
-        challenge: S,
-        origin: O,
+        request: &WebAuthnRegisterRequest,
     ) -> Result<(), WebAuthnError> {
         let client_data = self.get_client_data()?;
         let client_data_hash = self.hash_client_data()?;
         let att_data = self.get_attestation_data()?;
 
-        client_data.validate(ty, challenge.as_ref(), origin.as_ref());
+        client_data.validate(ty, request)?;
         att_data.validate(client_data_hash)?;
 
         Ok(())

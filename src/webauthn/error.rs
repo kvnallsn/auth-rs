@@ -1,11 +1,12 @@
 //! Top-Level WebAuthn Error
 
-use crate::webauthn::response::AttestationError;
+use crate::webauthn::response::{AttestationError, ClientDataError};
 use base64::DecodeError;
 use std::fmt;
 
 #[derive(Debug)]
 pub enum WebAuthnError {
+    ClientData(ClientDataError),
     Attestation(AttestationError),
     Base64Error(DecodeError),
     JsonError(serde_json::Error),
@@ -15,6 +16,7 @@ pub enum WebAuthnError {
 impl fmt::Display for WebAuthnError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            WebAuthnError::ClientData(e) => write!(f, "{}", e),
             WebAuthnError::Attestation(e) => write!(f, "{}", e),
             WebAuthnError::Base64Error(e) => write!(f, "{}", e),
             WebAuthnError::JsonError(e) => write!(f, "{}", e),
@@ -24,6 +26,12 @@ impl fmt::Display for WebAuthnError {
 }
 
 impl std::error::Error for WebAuthnError {}
+
+impl From<ClientDataError> for WebAuthnError {
+    fn from(e: ClientDataError) -> WebAuthnError {
+        WebAuthnError::ClientData(e)
+    }
+}
 
 impl From<AttestationError> for WebAuthnError {
     fn from(e: AttestationError) -> WebAuthnError {

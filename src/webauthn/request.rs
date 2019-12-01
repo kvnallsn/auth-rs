@@ -70,7 +70,7 @@ impl WebAuthnRegisterRequest {
     ///
     /// # Arguments
     /// * `timeout` - Time, in milliseconds, to wait
-    pub fn timeout<'a>(&'a mut self, timeout: u32) -> &'a mut Self {
+    pub fn set_timeout<'a>(&'a mut self, timeout: u32) -> &'a mut Self {
         self.timeout = Some(timeout);
         self
     }
@@ -79,7 +79,7 @@ impl WebAuthnRegisterRequest {
     ///
     /// # Arguments
     /// * `criteria` - Requirements for what authenticator should be used
-    pub fn auth_criteria<'a>(&'a mut self, critera: AuthenticatorCritera) -> &'a mut Self {
+    pub fn set_auth_criteria<'a>(&'a mut self, critera: AuthenticatorCritera) -> &'a mut Self {
         self.authenticator_selection = critera;
         self
     }
@@ -88,9 +88,19 @@ impl WebAuthnRegisterRequest {
     ///
     /// # Arguments
     /// * `attestation` - New attestation preference
-    pub fn attestation<'a>(&'a mut self, attestation: AttestationPreference) -> &'a mut Self {
+    pub fn set_attestation<'a>(&'a mut self, attestation: AttestationPreference) -> &'a mut Self {
         self.attestation = attestation;
         self
+    }
+
+    /// Returns the challenge as a base64url-encoded string
+    pub fn challenge(&self) -> String {
+        base64::encode_config(&self.challenge, base64::URL_SAFE)
+    }
+
+    /// Returns the relying party information about this request
+    pub fn relying_party(&self) -> &RelyingParty {
+        &self.rp
     }
 
     /// Converts this request into the equivalent JSON for sending to a client.
@@ -122,40 +132,40 @@ mod tests {
     #[test]
     fn pk_create_options_timeout() {
         let (user, rp) = setup();
-        let _ = WebAuthnRegisterRequest::new(rp, user).timeout(10000);
+        let _ = WebAuthnRegisterRequest::new(rp, user).set_timeout(10000);
     }
 
     #[test]
     fn pk_create_options_auth_criteria() {
         let (user, rp) = setup();
-        let _ =
-            WebAuthnRegisterRequest::new(rp, user).auth_criteria(AuthenticatorCritera::default());
+        let _ = WebAuthnRegisterRequest::new(rp, user)
+            .set_auth_criteria(AuthenticatorCritera::default());
     }
 
     #[test]
     fn pk_create_options_attestation() {
         let (user, rp) = setup();
-        let _ = WebAuthnRegisterRequest::new(rp, user).attestation(AttestationPreference::Indirect);
+        let _ =
+            WebAuthnRegisterRequest::new(rp, user).set_attestation(AttestationPreference::Indirect);
     }
 
     #[test]
     fn pk_create_options_all() {
         let (user, rp) = setup();
         let _ = WebAuthnRegisterRequest::new(rp, user)
-            .timeout(10010)
-            .attestation(AttestationPreference::Indirect)
-            .auth_criteria(AuthenticatorCritera::default());
+            .set_timeout(10010)
+            .set_attestation(AttestationPreference::Indirect)
+            .set_auth_criteria(AuthenticatorCritera::default());
     }
 
     #[test]
     fn pk_create_json() {
         let (user, rp) = setup();
         let result = WebAuthnRegisterRequest::new(rp, user)
-            .timeout(10010)
-            .attestation(AttestationPreference::Indirect)
-            .auth_criteria(AuthenticatorCritera::default())
+            .set_timeout(10010)
+            .set_attestation(AttestationPreference::Indirect)
+            .set_auth_criteria(AuthenticatorCritera::default())
             .json();
-        println!("{:?}", result);
         assert!(result.is_ok())
     }
 }
