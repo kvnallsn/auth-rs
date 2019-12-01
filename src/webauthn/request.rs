@@ -4,7 +4,7 @@ mod attestation;
 mod authenticator;
 
 use self::{attestation::AttestationPreference, authenticator::AuthenticatorCritera};
-use crate::webauthn::{pk::PublicKeyParams, rp::RelyingParty, user::User};
+use crate::webauthn::{pk::PublicKeyParams, rp::RelyingParty, user::User, WebAuthnError};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
@@ -93,9 +93,12 @@ impl WebAuthnRegisterRequest {
         self
     }
 
-    /// Placebo-method to show we are finished building
-    pub fn finish(self) -> Self {
-        self
+    /// Converts this request into the equivalent JSON for sending to a client.
+    /// This method is (usually) not required when working with web frameworks
+    /// like Rocket or Actix-Web since the framework (usually) has it's own
+    /// methods for returning JSON data
+    pub fn json(&self) -> Result<String, WebAuthnError> {
+        Ok(serde_json::to_string(self)?)
     }
 }
 
@@ -142,5 +145,17 @@ mod tests {
             .timeout(10010)
             .attestation(AttestationPreference::Indirect)
             .auth_criteria(AuthenticatorCritera::default());
+    }
+
+    #[test]
+    fn pk_create_json() {
+        let (user, rp) = setup();
+        let result = WebAuthnRegisterRequest::new(rp, user)
+            .timeout(10010)
+            .attestation(AttestationPreference::Indirect)
+            .auth_criteria(AuthenticatorCritera::default())
+            .json();
+        println!("{:?}", result);
+        assert!(result.is_ok())
     }
 }

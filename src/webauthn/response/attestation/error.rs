@@ -5,6 +5,17 @@ use std::{error::Error, fmt};
 
 #[derive(Clone, Debug)]
 pub enum AttestationError {
+    /// Occurs when the RP ID hash in the attestation auth data does not match
+    /// the value supplied with the creation request. (Potentially MitM!)
+    RpIdHashMismatch,
+
+    /// Occurs when the UserFlag is not set in the auth data flags
+    UserNotPresent,
+
+    /// Occurs when the UserVerified is not set in auth data and flags
+    /// and user verification has been specifically requested
+    UserNotVerified,
+
     /// Occurs when too many X.509 certs are includded in the response
     TooManyX509Certs,
 
@@ -33,6 +44,11 @@ impl Error for AttestationError {}
 impl fmt::Display for AttestationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let msg = match self {
+            AttestationError::RpIdHashMismatch => format!(
+                "RP ID Hash does not match expected value! **Possible Man-in-the-Middle Attack**"
+            ),
+            AttestationError::UserNotPresent => format!("User Not Present"),
+            AttestationError::UserNotVerified => format!("User Not Verified"),
             AttestationError::TooManyX509Certs => format!("Too Many X.509 Certs in Response (> 1)"),
             AttestationError::BadCert => format!("Invalid X.509 Certificate in Response"),
             AttestationError::UnsupportedAlgorithm => format!("Unsupported Algorithm in Response"),

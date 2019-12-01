@@ -4,9 +4,8 @@ pub mod common;
 pub mod webauthn;
 
 use crate::webauthn::{
-    request::WebAuthnRegisterRequest,
-    response::{WebAuthnResponse, WebAuthnType},
-    RelyingParty, User, WebAuthnError,
+    request::WebAuthnRegisterRequest, response::WebAuthnRegisterResponse, RelyingParty, User,
+    WebAuthnError, WebAuthnType,
 };
 
 pub struct SecurityDevice;
@@ -29,7 +28,7 @@ impl SecurityDevice {
     ///
     /// # Arguments
     /// * `form` - Form received from the client
-    pub fn register(form: WebAuthnResponse) -> Result<(), WebAuthnError> {
+    pub fn register(form: WebAuthnRegisterResponse) -> Result<(), WebAuthnError> {
         form.validate(
             WebAuthnType::Create,
             "s0Tnjjv67CzQxIdneKXRPrUYGyUjuZQJr17fRPkvdoA",
@@ -50,7 +49,7 @@ mod tests {
         (user, rp)
     }
 
-    fn read_create_response() -> Result<WebAuthnResponse, Box<dyn std::error::Error>> {
+    fn read_create_response() -> Result<WebAuthnRegisterResponse, Box<dyn std::error::Error>> {
         let file = File::open("test.json")?;
         let form = serde_json::from_reader(file)?;
         Ok(form)

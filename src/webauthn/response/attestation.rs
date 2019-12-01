@@ -50,26 +50,21 @@ impl AttestationData {
         let rp_id = vec![];
         let rp_id_hash = digest(&SHA256, &rp_id);
         if self.auth_data.rp_id_hash != rp_id_hash.as_ref() {
-            panic!("")
+            return Err(AttestationError::RpIdHashMismatch);
         }
-        // TODO
 
         // Verify the `User Present` flag is set in `self.auth_data`
         if !self.auth_data.is_flag_set(AuthDataFlag::UserPresent) {
-            panic!("attestion object: user not present");
+            return Err(AttestationError::UserNotPresent);
         }
 
         // if user verification is required, check for the user verification flag
         // TODO
 
         // Verify the attestation statement as specified by the attestation format
-        let result = match self.fmt {
-            AttestationFormat::FidoU2f(fido) => fido.validate(self.auth_data, client_data_hash),
-            _ => Err(AttestationError::UnsupportedAttestationFormat),
-        };
-
-        if let Err(e) = result {
-            panic!("Attestation Failed: {:?}", e);
+        match self.fmt {
+            AttestationFormat::FidoU2f(fido) => fido.validate(self.auth_data, client_data_hash)?,
+            _ => Err(AttestationError::UnsupportedAttestationFormat)?,
         }
 
         // Verify the credentialId is not registered to another user

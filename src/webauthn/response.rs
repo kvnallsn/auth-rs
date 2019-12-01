@@ -4,41 +4,18 @@ mod attestation;
 mod client_data;
 
 pub use self::attestation::AttestationError;
-use crate::WebAuthnError;
+use crate::webauthn::{WebAuthnError, WebAuthnType};
 
 use attestation::AttestationData;
 use client_data::ClientData;
 use ring::digest::{digest, Digest, SHA256};
 use serde::Deserialize;
 
-/// The different response types that are possible to receive after receiveing
-/// data from the client
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub enum WebAuthnType {
-    /// Corresponds to the `navigator.credentials.create()` client api
-    #[serde(alias = "webauthn.create")]
-    Create,
-
-    /// Corresponds to the `navigator.credentials.get()` client api
-    #[serde(alias = "webauthn.get")]
-    Get,
-}
-
-impl WebAuthnType {
-    /// Returns the string representation that will be seen in the response
-    pub fn as_str(&self) -> &str {
-        match self {
-            WebAuthnType::Create => "webauthn.create",
-            WebAuthnType::Get => "webauthn.get",
-        }
-    }
-}
-
 /// A `WebAuthnResponse` is the result received from the browser/client
 /// after a call to `navigator.credentials.create()` on the client side
 /// has been completed.  All fields are required to be present
 #[derive(Clone, Debug, Deserialize)]
-pub struct WebAuthnResponse {
+pub struct WebAuthnRegisterResponse {
     /// Base64-encoded id
     pub id: String,
 
@@ -55,7 +32,7 @@ pub struct WebAuthnResponse {
     client_data_json: String,
 }
 
-impl WebAuthnResponse {
+impl WebAuthnRegisterResponse {
     /// Returns the client data associated with this response
     fn get_client_data(&self) -> Result<ClientData, WebAuthnError> {
         let decoded = base64::decode_config(&self.client_data_json, base64::URL_SAFE)?;
