@@ -6,10 +6,15 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+web = ["rocket"]
+
 [dependencies]
 base64 = "^0.11.0"
 rand = "^0.7.2"
 ring = "^0.13.2"
+rocket = { version = "^0.4.2", optional = true }
 serde = { version = "^1.0", default-features = false, features = ["derive"] }
 serde_bytes = "^0.11.2"
 serde_cbor = "^0.10.2"

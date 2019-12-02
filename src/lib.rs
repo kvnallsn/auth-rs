@@ -4,7 +4,7 @@ pub mod common;
 pub mod webauthn;
 
 use crate::webauthn::{
-    request::WebAuthnRegisterRequest, response::WebAuthnRegisterResponse, RelyingParty, User,
+    request::WebAuthnRegisterRequest, response::WebAuthnRegisterResponse, User, WebAuthnConfig,
     WebAuthnError, WebAuthnType,
 };
 
@@ -16,11 +16,11 @@ impl SecurityDevice {
     /// # Arguments
     /// * `rp` - The RelyingParty this request represents
     /// * `user` - The user that owns this request
-    pub fn register_request<R: Into<RelyingParty>, U: Into<User>>(
-        rp: R,
+    pub fn register_request<U: Into<User>>(
+        cfg: &WebAuthnConfig,
         user: U,
     ) -> WebAuthnRegisterRequest {
-        WebAuthnRegisterRequest::new(rp, user)
+        WebAuthnRegisterRequest::new(cfg.as_relying_party(), user)
     }
 
     /// Parses the response to a register request
@@ -30,11 +30,13 @@ impl SecurityDevice {
     /// * `req - The register request to compare data against
     /// * `form` - Form received from the client
     pub fn register(
+        cfg: &WebAuthnConfig,
         req: &WebAuthnRegisterRequest,
         form: WebAuthnRegisterResponse,
     ) -> Result<(), WebAuthnError> {
         form.validate(
             WebAuthnType::Create,
+            cfg,
             req
             //"s0Tnjjv67CzQxIdneKXRPrUYGyUjuZQJr17fRPkvdoA",
             //"https://app.twinscroll.dev",
@@ -45,13 +47,13 @@ impl SecurityDevice {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::webauthn::{RelyingParty, User};
+    use crate::webauthn::{User, WebAuthnConfig};
     use std::fs::File;
 
-    fn setup() -> (User, RelyingParty) {
+    fn setup() -> (WebAuthnConfig, User) {
+        let config = WebAuthnConfig::new("https://app.twinscroll.dev");
         let user = User::new(vec![0], "user", "user");
-        let rp = RelyingParty::builder("rp").finish();
-        (user, rp)
+        (config, user)
     }
 
     fn read_create_response() -> Result<WebAuthnRegisterResponse, Box<dyn std::error::Error>> {
@@ -68,18 +70,18 @@ mod tests {
 
     #[test]
     fn register_device_json() -> Result<(), Box<dyn std::error::Error>> {
-        let (user, rp) = setup();
-        let req = SecurityDevice::register_request(rp, user).json();
+        let (cfg, user) = setup();
+        let req = SecurityDevice::register_request(&cfg, user).json();
         assert!(req.is_ok());
         Ok(())
     }
 
     #[test]
     fn register_device_response() -> Result<(), Box<dyn std::error::Error>> {
-        let (user, rp) = setup();
-        let req = SecurityDevice::register_request(rp, user);
+        let (cfg, user) = setup();
+        let req = SecurityDevice::register_request(&cfg, user);
         let resp = read_create_response()?;
-        SecurityDevice::register(&req, resp)?;
+        SecurityDevice::register(&cfg, &req, resp)?;
         Ok(())
     }
 }

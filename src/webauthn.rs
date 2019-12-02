@@ -4,12 +4,16 @@ pub mod pk;
 pub mod request;
 pub mod response;
 
+mod config;
 mod error;
 mod rp;
 mod user;
 
-pub use self::error::WebAuthnError;
-pub use rp::RelyingParty;
+#[cfg(feature = "web")]
+pub mod web;
+
+pub use config::WebAuthnConfig;
+pub use error::WebAuthnError;
 pub use user::User;
 
 use serde::Deserialize;
@@ -41,5 +45,28 @@ impl WebAuthnType {
             WebAuthnType::Create => "webauthn.create",
             WebAuthnType::Get => "webauthn.get",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_webauthn_config() {
+        let config = WebAuthnConfig::new("http://app.example.com");
+        assert_eq!(config.id(), "app.example.com");
+    }
+
+    #[test]
+    fn build_webauthn_config_with_trailing_slash() {
+        let config = WebAuthnConfig::new("http://app.example.com/");
+        assert_eq!(config.id(), "app.example.com");
+    }
+
+    #[test]
+    fn build_webauthn_config_no_scheme() {
+        let config = WebAuthnConfig::new("app.example.com/");
+        assert_eq!(config.id(), "app.example.com");
     }
 }

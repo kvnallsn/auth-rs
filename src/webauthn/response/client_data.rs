@@ -1,6 +1,6 @@
 //! Client data related code
 
-use crate::webauthn::{request::WebAuthnRegisterRequest, response::WebAuthnType};
+use crate::webauthn::{request::WebAuthnRegisterRequest, response::WebAuthnType, WebAuthnConfig};
 use serde::Deserialize;
 use std::fmt;
 
@@ -14,6 +14,10 @@ pub enum ClientDataError {
     /// Occurs when the challenge we received does not match the challenge
     /// we sent to the client
     ChallengeMismatch,
+
+    /// Occurs when the origin the reponse specifies does not match the
+    /// origin in our config
+    OriginMismatch(String, String),
 }
 
 impl fmt::Display for ClientDataError {
@@ -24,6 +28,9 @@ impl fmt::Display for ClientDataError {
                 got, exp
             ),
             ClientDataError::ChallengeMismatch => format!("Challenge Mismatch!"),
+            ClientDataError::OriginMismatch(got, exp) => {
+                format!("Origin Mismatch: Got '{}', Expected: '{}'", got, exp)
+            }
         };
 
         write!(f, "{}", msg)
@@ -89,6 +96,7 @@ impl ClientData {
     pub fn validate(
         &self,
         ty: WebAuthnType,
+        cfg: &WebAuthnConfig,
         request: &WebAuthnRegisterRequest,
     ) -> Result<(), ClientDataError> {
         if self.ty != ty {
@@ -97,6 +105,13 @@ impl ClientData {
 
         if self.challenge != request.challenge() {
             return Err(ClientDataError::ChallengeMismatch);
+        }
+
+        if self.origin != cfg.origin() {
+            return Err(ClientDataError::OriginMismatch(
+                self.origin.clone(),
+                cfg.origin().to_owned(),
+            ));
         }
 
         Ok(())
