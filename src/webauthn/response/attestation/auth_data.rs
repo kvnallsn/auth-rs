@@ -10,7 +10,7 @@ pub struct AttestationAuthData {
     pub aa_guid: [u8; 16],
     pub length: u16,
     pub cred_id: Vec<u8>,
-    pub key: CoseKey,
+    pub cred_pub_key: CoseKey,
 }
 
 #[allow(dead_code)]
@@ -64,7 +64,7 @@ impl AttestationAuthData {
         let mut cred_id: Vec<u8> = Vec::new();
         cred_id.extend_from_slice(&data[55..cred_id_end]);
 
-        let key = CoseKey::parse(&data[cred_id_end..])?;
+        let cred_pub_key = CoseKey::parse(&data[cred_id_end..])?;
 
         Ok(AttestationAuthData {
             rp_id_hash,
@@ -73,7 +73,7 @@ impl AttestationAuthData {
             aa_guid,
             length,
             cred_id,
-            key,
+            cred_pub_key,
         })
     }
 }

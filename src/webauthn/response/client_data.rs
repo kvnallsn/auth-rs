@@ -1,6 +1,6 @@
 //! Client data related code
 
-use crate::webauthn::{request::WebAuthnRegisterRequest, response::WebAuthnType, WebAuthnConfig};
+use crate::webauthn::{response::WebAuthnType, WebAuthnConfig};
 use serde::Deserialize;
 use std::fmt;
 
@@ -93,17 +93,22 @@ pub struct ClientData {
 
 impl ClientData {
     /// Ensures all criteria match what is anticipated
-    pub fn validate(
+    ///
+    /// # Arguments
+    /// * `ty` - What kind of WebAuthn message to validate (i.e., Create or Get)
+    /// * `cfg` - The configuration the request was created with (contains, origin, etc.)
+    /// * `challenge` - The base64url encoded challenege string that was generated with the request
+    pub fn validate<S: Into<String>>(
         &self,
         ty: WebAuthnType,
         cfg: &WebAuthnConfig,
-        request: &WebAuthnRegisterRequest,
+        challenge: S,
     ) -> Result<(), ClientDataError> {
         if self.ty != ty {
             return Err(ClientDataError::InvalidWebAuthnType(self.ty.clone(), ty));
         }
 
-        if self.challenge != request.challenge() {
+        if self.challenge != challenge.into() {
             return Err(ClientDataError::ChallengeMismatch);
         }
 

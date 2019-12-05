@@ -9,7 +9,7 @@ use self::{
     auth_data::{AttestationAuthData, AuthDataFlag},
     format::AttestationFormat,
 };
-use crate::WebAuthnError;
+use crate::{webauthn::WebAuthnConfig, WebAuthnError};
 use ring::digest::{digest, Digest, SHA256};
 use serde::Deserialize;
 
@@ -45,10 +45,13 @@ impl AttestationData {
     }
 
     /// Validates the data contained in this attestation object
-    pub fn validate(self, client_data_hash: Digest) -> Result<(), AttestationError> {
+    pub fn validate(
+        self,
+        config: &WebAuthnConfig,
+        client_data_hash: Digest,
+    ) -> Result<(Vec<u8>, Vec<u8>), AttestationError> {
         // Verify `self.auth_data.rp_id_hash` is the SHA256 hash of the expected RP ID
-        let rp_id = vec![];
-        let rp_id_hash = digest(&SHA256, &rp_id);
+        let rp_id_hash = digest(&SHA256, config.id().as_bytes());
         if self.auth_data.rp_id_hash != rp_id_hash.as_ref() {
             return Err(AttestationError::RpIdHashMismatch);
         }
@@ -62,14 +65,14 @@ impl AttestationData {
         // TODO
 
         // Verify the attestation statement as specified by the attestation format
-        match self.fmt {
+        let (cred_id, cred_pub_key) = match self.fmt {
             AttestationFormat::FidoU2f(fido) => fido.validate(self.auth_data, client_data_hash)?,
             _ => Err(AttestationError::UnsupportedAttestationFormat)?,
-        }
+        };
 
         // Verify the credentialId is not registered to another user
         // TODO
 
-        Ok(())
+        Ok((cred_id, cred_pub_key))
     }
 }

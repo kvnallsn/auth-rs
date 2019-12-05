@@ -91,7 +91,7 @@ impl ES256Params {
     }
 
     /// Converts this public key into a the X962 RAW format
-    pub fn as_x962_raw(self) -> Option<Vec<u8>> {
+    pub fn to_x962_raw(self) -> Option<Vec<u8>> {
         if let Some(mut x) = self.x {
             if let Some(mut y) = self.y {
                 let mut raw = vec![0x04];

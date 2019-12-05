@@ -95,7 +95,7 @@ impl WebAuthnRegisterRequest {
 
     /// Returns the challenge as a base64url-encoded string
     pub fn challenge(&self) -> String {
-        base64::encode_config(&self.challenge, base64::URL_SAFE)
+        base64::encode_config(&self.challenge, base64::URL_SAFE_NO_PAD)
     }
 
     /// Returns the relying party information about this request
