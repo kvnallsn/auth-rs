@@ -4,7 +4,12 @@ mod attestation;
 mod authenticator;
 
 use self::{attestation::AttestationPreference, authenticator::AuthenticatorCritera};
-use crate::webauthn::{pk::PublicKeyParams, rp::RelyingParty, user::User, WebAuthnError};
+use crate::webauthn::{
+    pk::{PublicKeyDescriptor, PublicKeyParams},
+    rp::RelyingParty,
+    user::{User, UserVerificationRequirement},
+    WebAuthnConfig, WebAuthnError,
+};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
@@ -109,6 +114,52 @@ impl WebAuthnRegisterRequest {
     /// methods for returning JSON data
     pub fn json(&self) -> Result<String, WebAuthnError> {
         Ok(serde_json::to_string(self)?)
+    }
+}
+
+/// Options for validating an existing, registered PublicKey. The json serialization
+/// of this struct is passed to `navigator.credentials.get()` on the client side.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AuthenticateRequest {
+    /// Random bytes that the selected authenticator signs, along with other data,
+    /// when producing an authentication assertion.
+    challenge: Vec<u8>,
+
+    /// A time, in milliseconds, that the caller is willing to wait for the call to
+    /// complete. The value is treated as a hint, and MAY be overridden by the client.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    timeout: Option<u32>,
+
+    /// Relying Party Identifer, filled in from config parameter
+    #[serde(rename = "rpId", alias = "rpID")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rp_id: Option<String>,
+
+    /// List of PublicKeyCredentialDescriptor objects representing public key credentials
+    /// acceptable to the caller, in descending order of the caller’s preference (the first
+    /// item in the list is the most preferred credential, and so on down the list).
+    #[serde(rename = "allowCredentials")]
+    allow_credentials: Vec<PublicKeyDescriptor>,
+
+    /// Relying Party's requirements regarding user verification for the `get()` operation.
+    /// Eligible authenticators are filtered to only those capable of satisfying this requirement.
+    #[serde(rename = "userVerification")]
+    user_verification: UserVerificationRequirement,
+}
+
+impl AuthenticateRequest {
+    pub fn new(config: &WebAuthnConfig, devices: Vec<PublicKeyDescriptor>) -> AuthenticateRequest {
+        // generate a random challenge
+        let mut challenge = vec![0; 32];
+        rand::thread_rng().fill_bytes(&mut challenge);
+
+        AuthenticateRequest {
+            challenge,
+            timeout: None,
+            rp_id: Some(config.id().to_owned()),
+            allow_credentials: devices,
+            user_verification: UserVerificationRequirement::Preferred,
+        }
     }
 }
 

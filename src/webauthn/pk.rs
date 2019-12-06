@@ -81,3 +81,52 @@ impl PublicKeyCredential {
         }
     }
 }
+
+/// Different types of connections that authenticators can have
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum Transport {
+    /// An authenticator connected via USB
+    #[serde(alias = "usb")]
+    Usb,
+
+    /// An authenticator available via NFC
+    #[serde(alias = "nfc")]
+    Nfc,
+
+    /// An authenticator available via Bluetooth Low Energy (BLE)
+    #[serde(alias = "ble")]
+    Ble,
+
+    /// An authenticator internal to the device (fingerprint, tpm, etc.)
+    #[serde(alias = "internal")]
+    Internal,
+
+    /// An authenticator available via Apple's Lightning port
+    #[serde(alias = "lightning")]
+    Lightning,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PublicKeyDescriptor {
+    /// This member contains the type of the public key credential the caller is referring to.
+    /// In this case, generally "public-key"
+    #[serde(rename = "type")]
+    ty: PublicKeyCredentialType,
+
+    /// The Credential ID of the public key credential the caller is referring to.
+    id: Vec<u8>,
+
+    /// Hint as to how the client might communicate with the managing authenticator of the public
+    /// key credential the caller is referring to
+    transports: Vec<Transport>,
+}
+
+impl PublicKeyDescriptor {
+    pub fn new(id: Vec<u8>) -> PublicKeyDescriptor {
+        PublicKeyDescriptor {
+            ty: PublicKeyCredentialType::PublicKey,
+            id,
+            transports: vec![Transport::Usb],
+        }
+    }
+}

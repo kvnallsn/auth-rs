@@ -80,8 +80,8 @@ impl WebAuthnRegisterResponse {
         let (cred_id, cred_pubkey) = att_data.validate(cfg, client_data_hash)?;
 
         Ok((
-            base64::encode_config(&cred_id, base64::STANDARD_NO_PAD),
-            base64::encode_config(&cred_pubkey, base64::STANDARD_NO_PAD),
+            base64::encode_config(&cred_id, base64::URL_SAFE_NO_PAD),
+            base64::encode_config(&cred_pubkey, base64::URL_SAFE_NO_PAD),
         ))
     }
 }
