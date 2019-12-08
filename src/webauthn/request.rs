@@ -161,6 +161,10 @@ impl AuthenticateRequest {
             user_verification: UserVerificationRequirement::Preferred,
         }
     }
+
+    pub fn challenge(&self) -> String {
+        base64::encode_config(&self.challenge, base64::URL_SAFE_NO_PAD)
+    }
 }
 
 #[cfg(test)]
