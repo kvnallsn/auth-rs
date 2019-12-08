@@ -53,7 +53,6 @@ impl SecurityDevice {
 
     pub fn authenticate_request(&self, cfg: &WebAuthnConfig) -> AuthenticateRequest {
         let req = AuthenticateRequest::new(cfg, vec![self.as_descriptor()]);
-        println!("{:?}", req);
         req
     }
 
