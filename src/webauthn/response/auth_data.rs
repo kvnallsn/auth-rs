@@ -8,38 +8,6 @@ use ring::digest::{digest, SHA256};
 use std::fmt;
 
 #[derive(Clone, Debug)]
-pub struct CredentialData {
-    pub aa_guid: [u8; 16],
-    pub length: u16,
-    pub cred_id: Vec<u8>,
-    pub cred_pub_key: CoseKey,
-}
-
-impl CredentialData {
-    pub fn parse(data: &[u8]) -> Result<Self, AttestationError> {
-        let mut aa_guid = [0; 16];
-        aa_guid.copy_from_slice(&data[..16]);
-
-        let mut length = [0; 2];
-        length.copy_from_slice(&data[16..18]);
-        let length = u16::from_be_bytes(length);
-
-        let cred_id_end: usize = 18 + length as usize;
-        let mut cred_id: Vec<u8> = Vec::new();
-        cred_id.extend_from_slice(&data[18..cred_id_end]);
-
-        let cred_pub_key = CoseKey::parse(&data[cred_id_end..])?;
-
-        Ok(CredentialData {
-            aa_guid,
-            length,
-            cred_id,
-            cred_pub_key,
-        })
-    }
-}
-
-#[derive(Clone, Debug)]
 pub enum AuthError {
     /// Occurs when the RP ID hash in the attestation auth data does not match
     /// the value supplied with the creation request. (Potentially MitM!)
@@ -99,6 +67,38 @@ impl From<webpki::Error> for AuthError {
 impl From<U2fError> for AuthError {
     fn from(e: U2fError) -> AuthError {
         AuthError::U2fError(e)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct CredentialData {
+    pub aa_guid: [u8; 16],
+    pub length: u16,
+    pub cred_id: Vec<u8>,
+    pub cred_pub_key: CoseKey,
+}
+
+impl CredentialData {
+    pub fn parse(data: &[u8]) -> Result<Self, AttestationError> {
+        let mut aa_guid = [0; 16];
+        aa_guid.copy_from_slice(&data[..16]);
+
+        let mut length = [0; 2];
+        length.copy_from_slice(&data[16..18]);
+        let length = u16::from_be_bytes(length);
+
+        let cred_id_end: usize = 18 + length as usize;
+        let mut cred_id: Vec<u8> = Vec::new();
+        cred_id.extend_from_slice(&data[18..cred_id_end]);
+
+        let cred_pub_key = CoseKey::parse(&data[cred_id_end..])?;
+
+        Ok(CredentialData {
+            aa_guid,
+            length,
+            cred_id,
+            cred_pub_key,
+        })
     }
 }
 
@@ -192,6 +192,13 @@ impl AuthData {
     pub fn credential_id(&self) -> Result<&[u8], AuthError> {
         let data = self.cred_data.as_ref().ok_or(AuthError::CredDataMissing)?;
         Ok(data.cred_id.as_slice())
+    }
+
+    /// Returns the signed counter (aka number of times this authenticator has been used)
+    /// Can be used to check for "cloned" authenticators when the value registered with
+    /// us is (abnormally) higher than the one the authenticator has
+    pub fn count(&self) -> u32 {
+        self.counter
     }
 
     /// Checks if a flags is set in the auth data's flag field.  A return value

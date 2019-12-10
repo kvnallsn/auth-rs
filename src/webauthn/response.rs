@@ -51,7 +51,7 @@ impl CreateResponse {
         ty: WebAuthnType,
         cfg: &WebAuthnConfig,
         challenge: S,
-    ) -> Result<(String, String), WebAuthnError> {
+    ) -> Result<(String, String, u32), WebAuthnError> {
         // Get the client data the SHA256 hash of it
         let client_data = base64::decode_config(&self.client_data_json, base64::URL_SAFE)?;
         let client_data_hash = digest(&SHA256, &client_data);
@@ -75,6 +75,7 @@ impl CreateResponse {
         Ok((
             base64::encode_config(&cred_id, base64::URL_SAFE_NO_PAD),
             base64::encode_config(&cred_pubkey, base64::URL_SAFE_NO_PAD),
+            auth_data.count(),
         ))
     }
 }
@@ -118,9 +119,6 @@ impl GetResponse {
         // (15 - 17) verify auth data
         auth_data.validate(cfg)?;
 
-        // (17) If User Verification is required, check if flag is set
-        // TODO
-
         // (18) Verify extensions
         // TODO
 
@@ -142,6 +140,7 @@ impl GetResponse {
 
         // (21) Verify signedCount
         // TODO
+        println!("Sign count: {}", auth_data.count());
 
         Ok(())
     }
@@ -186,7 +185,7 @@ impl WebAuthnResponse {
         &self,
         cfg: &WebAuthnConfig,
         challenge: S,
-    ) -> Result<(String, String), WebAuthnError> {
+    ) -> Result<(String, String, u32), WebAuthnError> {
         match self.response {
             Response::Create(ref resp) => resp.validate(WebAuthnType::Create, cfg, challenge),
             _ => Err(WebAuthnError::IncorrectResponseType),

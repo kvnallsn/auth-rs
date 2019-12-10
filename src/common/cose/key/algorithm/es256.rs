@@ -102,8 +102,6 @@ impl ES256Params {
                 let mut raw = vec![0x04];
                 raw.extend_from_slice(x);
                 raw.extend_from_slice(y);
-                //raw.append(&mut x);
-                //raw.append(&mut y);
                 return Some(raw);
             }
         }

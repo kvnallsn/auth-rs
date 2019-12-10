@@ -49,7 +49,7 @@ impl SecurityDevice {
         challenge: S,
         form: WebAuthnResponse,
     ) -> Result<SecurityDevice, WebAuthnError> {
-        let (id, pubkey) = form.validate_create(cfg, challenge)?;
+        let (id, pubkey, _) = form.validate_create(cfg, challenge)?;
         Ok(SecurityDevice { id, pubkey })
     }
 
