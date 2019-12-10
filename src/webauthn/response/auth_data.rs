@@ -1,6 +1,9 @@
 //! Authentication Data contained in the Attestation Response
 
-use crate::{common::cose::CoseKey, webauthn::response::AttestationError, WebAuthnConfig};
+use crate::{
+    common::cose::CoseKey,
+    webauthn::response::{attestation::U2fError, AttestationError, WebAuthnConfig},
+};
 use ring::digest::{digest, SHA256};
 use std::fmt;
 
@@ -38,8 +41,32 @@ impl CredentialData {
 
 #[derive(Clone, Debug)]
 pub enum AuthError {
+    /// Occurs when the RP ID hash in the attestation auth data does not match
+    /// the value supplied with the creation request. (Potentially MitM!)
     RpIdHashMismatch,
+
+    /// Occurs when the UserFlag is not set in the auth data flags
     UserNotPresent,
+
+    /// Occurs when the UserVerified is not set in auth data and flags
+    /// and user verification has been specifically requested
+    UserNotVerified,
+
+    /// Occurs when the credential data is missing from the response
+    CredDataMissing,
+
+    /// Occurs when the public key components are not present in this key
+    PublicKeyMissing,
+
+    /// Occurs when the private key components are not present in this key
+    PrivateKeyMissing,
+
+    /// Occurs when an error occurs during fido-u2f attestation
+    U2fError(U2fError),
+
+    /// Occurs when the message built fails to validate against the
+    /// signature provided
+    SignatureVerificationFailed(webpki::Error),
 }
 
 impl std::error::Error for AuthError {}
@@ -49,9 +76,29 @@ impl fmt::Display for AuthError {
         let msg = match self {
             AuthError::RpIdHashMismatch => format!("Relying Party id mismatch"),
             AuthError::UserNotPresent => format!("User not found but required"),
+            AuthError::UserNotVerified => format!("User not verified but verification is required"),
+            AuthError::CredDataMissing => format!("Credential data missing but requred"),
+            AuthError::PublicKeyMissing => format!("public key components missing"),
+            AuthError::PrivateKeyMissing => format!("private key components missing"),
+            AuthError::U2fError(e) => format!("fido-u2f failed attestation: {}", e),
+            AuthError::SignatureVerificationFailed(e) => {
+                format!("failed to verify messate with x.509 certificate: {:?}", e)
+            }
         };
 
         write!(f, "Authentication Error: {}", msg)
+    }
+}
+
+impl From<webpki::Error> for AuthError {
+    fn from(e: webpki::Error) -> AuthError {
+        AuthError::SignatureVerificationFailed(e)
+    }
+}
+
+impl From<U2fError> for AuthError {
+    fn from(e: U2fError) -> AuthError {
+        AuthError::U2fError(e)
     }
 }
 
@@ -131,6 +178,20 @@ impl AuthData {
     /// Return a copy of the credential data
     pub fn credential_data(&self) -> Option<&CredentialData> {
         self.cred_data.as_ref()
+    }
+
+    /// Returns the public key in raw format
+    pub fn public_key(&self) -> Result<Vec<u8>, AuthError> {
+        let data = self.cred_data.as_ref().ok_or(AuthError::CredDataMissing)?;
+        data.cred_pub_key
+            .as_raw()
+            .ok_or(AuthError::PublicKeyMissing)
+    }
+
+    /// Returns the bytes of the credential id stored in the credential data
+    pub fn credential_id(&self) -> Result<&[u8], AuthError> {
+        let data = self.cred_data.as_ref().ok_or(AuthError::CredDataMissing)?;
+        Ok(data.cred_id.as_slice())
     }
 
     /// Checks if a flags is set in the auth data's flag field.  A return value

@@ -96,12 +96,14 @@ impl ES256Params {
     ///     * `0x04` - Indicates this is a raw (non-compressed) key
     ///     * `x` is the x-coordinate of the public key
     ///     * `y` is the y-coordinate of the public key
-    pub fn to_raw(self) -> Option<Vec<u8>> {
-        if let Some(mut x) = self.x {
-            if let Some(mut y) = self.y {
+    pub fn as_raw(&self) -> Option<Vec<u8>> {
+        if let Some(ref x) = self.x {
+            if let Some(ref y) = self.y {
                 let mut raw = vec![0x04];
-                raw.append(&mut x);
-                raw.append(&mut y);
+                raw.extend_from_slice(x);
+                raw.extend_from_slice(y);
+                //raw.append(&mut x);
+                //raw.append(&mut y);
                 return Some(raw);
             }
         }

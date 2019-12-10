@@ -1,11 +1,24 @@
 //! Attestation Response Code
 
 mod error;
-mod format;
+mod fidou2f;
 
-pub use self::{error::AttestationError, format::AttestationFormat};
+pub use self::{error::AttestationError, fidou2f::U2fError};
 use crate::{webauthn::response::auth_data::AuthData, WebAuthnError};
 use serde::Deserialize;
+
+/// Different types of attestation have different ways to authenticate/validate
+/// the data.  This enum contains of the various different ways supported by
+/// this library.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(tag = "fmt", content = "attStmt")]
+pub enum AttestationFormat {
+    #[serde(alias = "packed")]
+    Packed,
+
+    #[serde(alias = "fido-u2f")]
+    FidoU2f(fidou2f::FidoU2fAttestation),
+}
 
 #[derive(Clone, Debug, Deserialize)]
 struct AttestationData {

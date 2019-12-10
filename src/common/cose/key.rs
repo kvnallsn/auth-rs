@@ -243,4 +243,10 @@ impl CoseKey {
 
         Ok(builder.finish()?)
     }
+
+    pub fn as_raw(&self) -> Option<Vec<u8>> {
+        match self.alg {
+            CoseKeyAlgorithm::ES256(ref params) => params.as_raw(),
+        }
+    }
 }
