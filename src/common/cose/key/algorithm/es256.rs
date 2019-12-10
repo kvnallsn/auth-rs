@@ -45,6 +45,7 @@ pub struct ES256Params {
     d: Option<Vec<u8>>,
 }
 
+#[allow(dead_code)]
 impl ES256Params {
     /// Builds the ES256 params by parsing the BTreeMap
     pub fn from_cbor(map: &CoseMap) -> Result<ES256Params, CoseError> {
@@ -90,8 +91,12 @@ impl ES256Params {
         Ok(ES256Params { crv, x, y, d })
     }
 
-    /// Converts this public key into a the X962 RAW format
-    pub fn to_x962_raw(self) -> Option<Vec<u8>> {
+    /// Converts this public key into a the X9.62 RAW (octet) format
+    /// which is defined as `0x04 | x | y` where:
+    ///     * `0x04` - Indicates this is a raw (non-compressed) key
+    ///     * `x` is the x-coordinate of the public key
+    ///     * `y` is the y-coordinate of the public key
+    pub fn to_raw(self) -> Option<Vec<u8>> {
         if let Some(mut x) = self.x {
             if let Some(mut y) = self.y {
                 let mut raw = vec![0x04];
@@ -123,14 +128,14 @@ impl ES256Params {
     /// Returns true if these ES256 parameters contain a private key (i.e., d is not None)
     ///
     /// If this method returns true, then `unwrap()` can be successfully called on d
-    pub fn is_public(&self) -> bool {
+    pub fn is_private(&self) -> bool {
         self.d.is_some()
     }
 
     /// Returns true if these ES256 parameters contain a public key (i.e., x and y are not None)
     ///
     /// If this method returns true, then `unwrap()` can be successfully called on x and y
-    pub fn is_private(&self) -> bool {
+    pub fn is_public(&self) -> bool {
         self.x.is_some() && self.y.is_some()
     }
 }

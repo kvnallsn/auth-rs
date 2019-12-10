@@ -1,13 +1,15 @@
 //! FIDO2 WebAuthn implementation
 
-pub mod common;
 pub mod webauthn;
+
+mod common;
+mod parsers;
 
 use crate::webauthn::{
     pk::PublicKeyDescriptor,
     request::{AuthenticateRequest, WebAuthnRegisterRequest},
-    response::WebAuthnRegisterResponse,
-    User, WebAuthnConfig, WebAuthnError, WebAuthnType,
+    response::WebAuthnResponse,
+    User, WebAuthnConfig, WebAuthnError,
 };
 
 pub struct SecurityDevice {
@@ -45,15 +47,26 @@ impl SecurityDevice {
     pub fn register<S: Into<String>>(
         cfg: &WebAuthnConfig,
         challenge: S,
-        form: WebAuthnRegisterResponse,
+        form: WebAuthnResponse,
     ) -> Result<SecurityDevice, WebAuthnError> {
-        let (id, pubkey) = form.validate(WebAuthnType::Create, cfg, challenge)?;
+        let (id, pubkey) = form.validate_create(cfg, challenge)?;
         Ok(SecurityDevice { id, pubkey })
     }
 
     pub fn authenticate_request(&self, cfg: &WebAuthnConfig) -> AuthenticateRequest {
         let req = AuthenticateRequest::new(cfg, vec![self.as_descriptor()]);
         req
+    }
+
+    pub fn authenticate<S: Into<String>>(
+        &self,
+        cfg: &WebAuthnConfig,
+        challenge: S,
+        response: WebAuthnResponse,
+    ) {
+        response
+            .validate_get(cfg, challenge, self.pubkey.clone())
+            .unwrap();
     }
 
     pub fn as_descriptor(&self) -> PublicKeyDescriptor {
