@@ -16,7 +16,7 @@ pub use config::WebAuthnConfig;
 pub use error::WebAuthnError;
 pub use user::User;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// The different response types that are possible to receive after receiveing
@@ -45,6 +45,50 @@ impl WebAuthnType {
             WebAuthnType::Create => "webauthn.create",
             WebAuthnType::Get => "webauthn.get",
         }
+    }
+}
+
+/// A `WebAuthnDevice` represents a security token or similiar physical hardware
+/// device that the user will use to authenticate with the app (e.g., YubiKey).
+/// The information contained in this struct is everything needed to authenticate
+/// a user against a specific token
+#[derive(Debug, Deserialize, Serialize)]
+pub struct WebAuthnDevice {
+    /// The devices's credential id. A unique value per device
+    id: Vec<u8>,
+
+    /// The public key belonging to this device
+    pk: Vec<u8>,
+
+    /// The number of times this has been used
+    count: u32,
+}
+
+impl WebAuthnDevice {
+    /// Creates a new `WebAuthnDevice` with the specified parameters
+    ///
+    /// # Arguments
+    /// * `id` - Credential Id of the device
+    /// * `public_key` - Raw public key (as bytes) corresponding to the id
+    /// * `count` - Number of times this key has been used
+    pub fn new(id: Vec<u8>, public_key: Vec<u8>, count: u32) -> WebAuthnDevice {
+        WebAuthnDevice {
+            id,
+            pk: public_key,
+            count,
+        }
+    }
+
+    pub fn id(&self) -> &[u8] {
+        &self.id
+    }
+
+    pub fn public_key(&self) -> &[u8] {
+        &self.pk
+    }
+
+    pub fn count(&self) -> u32 {
+        self.count
     }
 }
 

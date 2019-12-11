@@ -12,7 +12,7 @@ use crate::{
     parsers,
     webauthn::{
         response::{attestation::AttestationFormat, auth_data::AuthData},
-        WebAuthnConfig, WebAuthnError, WebAuthnType,
+        WebAuthnConfig, WebAuthnDevice, WebAuthnError, WebAuthnType,
     },
 };
 
@@ -23,6 +23,48 @@ use ring::{
 };
 use serde::Deserialize;
 use untrusted::Input;
+
+/// Validates a response received after a call to `navigator.credentials.create()` (i.e.,
+/// registering a token).  Returns the id of the credential that was just registered
+/// and the associated public key as (credential_id, pub_key).  In the event the response
+/// contained is not a create response, returns an `IncorrectResponseType` response
+pub fn register<S: Into<String>>(
+    form: WebAuthnResponse,
+    config: &WebAuthnConfig,
+    challenge: S,
+) -> Result<WebAuthnDevice, WebAuthnError> {
+    if let Response::Create(ref resp) = form.response() {
+        let (id, pk, count) = resp.validate(WebAuthnType::Create, config, challenge)?;
+        Ok(WebAuthnDevice::new(id, pk, count))
+    } else {
+        Err(WebAuthnError::IncorrectResponseType)
+    }
+}
+
+/// Validates  response recieved after a call to `navigator.credentials.get()` (i.e.,
+/// logging in with a token)
+pub fn authenticate<S: Into<String>>(
+    form: WebAuthnResponse,
+    config: &WebAuthnConfig,
+    challenge: S,
+    devices: &[WebAuthnDevice],
+) -> Result<(), WebAuthnError> {
+    // authenticates against a set of tokens
+    if let Response::Get(ref resp) = form.response() {
+        // (5) Verify the credential id in the request matches the credential id
+        // in the response
+        // TODO
+
+        // (6) Verify the credential id in the response is a credential owned by
+        // the requesting user
+        // TODO
+
+        // (7 / 20.1) Retrieve and covert pubkey into the correct format
+        resp.validate(WebAuthnType::Get, config, challenge, devices)
+    } else {
+        Err(WebAuthnError::IncorrectResponseType)
+    }
+}
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type")]
@@ -51,7 +93,7 @@ impl CreateResponse {
         ty: WebAuthnType,
         cfg: &WebAuthnConfig,
         challenge: S,
-    ) -> Result<(String, String, u32), WebAuthnError> {
+    ) -> Result<(Vec<u8>, Vec<u8>, u32), WebAuthnError> {
         // Get the client data the SHA256 hash of it
         let client_data = base64::decode_config(&self.client_data_json, base64::URL_SAFE)?;
         let client_data_hash = digest(&SHA256, &client_data);
@@ -72,11 +114,7 @@ impl CreateResponse {
             _ => Err(AttestationError::UnsupportedAttestationFormat)?,
         };
 
-        Ok((
-            base64::encode_config(&cred_id, base64::URL_SAFE_NO_PAD),
-            base64::encode_config(&cred_pubkey, base64::URL_SAFE_NO_PAD),
-            auth_data.count(),
-        ))
+        Ok((cred_id, cred_pubkey, auth_data.count()))
     }
 }
 
@@ -108,7 +146,7 @@ impl GetResponse {
         ty: WebAuthnType,
         cfg: &WebAuthnConfig,
         challenge: S,
-        pubkey: Vec<u8>,
+        devices: &[WebAuthnDevice],
     ) -> Result<(), WebAuthnError> {
         // (10 - 14) Verify Client Data
         let client_data: ClientData = serde_json::from_slice(&self.client_data_json)?;
@@ -130,17 +168,31 @@ impl GetResponse {
         verification_data.extend_from_slice(&self.authenticator_data);
         verification_data.extend_from_slice(hash.as_ref());
 
+        // look up pub-key for cred id in response
+        let cred_id = auth_data.credential_id()?;
+        let mut matching_devices: Vec<&WebAuthnDevice> =
+            devices.iter().filter(|d| d.id() == cred_id).collect();
+        if matching_devices.len() != 1 {
+            return Err(WebAuthnError::DeviceNotFound);
+        }
+        let device = matching_devices.remove(0);
+
         signature::verify(
             &signature::ECDSA_P256_SHA256_ASN1,
-            Input::from(&pubkey),
+            Input::from(&device.public_key()),
             Input::from(&verification_data),
             Input::from(&self.signature),
         )
         .map_err(|_| WebAuthnError::SignatureFailed)?;
 
         // (21) Verify signedCount
-        // TODO
-        println!("Sign count: {}", auth_data.count());
+        if device.count() != auth_data.count() {
+            println!(
+                "Sign count mismatch: stored = {}, received = {}",
+                device.count(),
+                auth_data.count()
+            );
+        }
 
         Ok(())
     }
@@ -177,45 +229,7 @@ impl WebAuthnResponse {
         }
     }
 
-    /// Validates a response received after a call to `navigator.credentials.create()` (i.e.,
-    /// registering a token).  Returns the id of the credential that was just registered
-    /// and the associated public key as (credential_id, pub_key).  In the event the response
-    /// contained is not a create response, returns an `IncorrectResponseType` response
-    pub fn validate_create<S: Into<String>>(
-        &self,
-        cfg: &WebAuthnConfig,
-        challenge: S,
-    ) -> Result<(String, String, u32), WebAuthnError> {
-        match self.response {
-            Response::Create(ref resp) => resp.validate(WebAuthnType::Create, cfg, challenge),
-            _ => Err(WebAuthnError::IncorrectResponseType),
-        }
-    }
-
-    /// Validates  response recieved after a call to `navigator.credentials.get()` (i.e.,
-    /// logging in with a token)
-    pub fn validate_get<S: Into<String>>(
-        &self,
-        cfg: &WebAuthnConfig,
-        challenge: S,
-        pubkey: String,
-    ) -> Result<(), WebAuthnError> {
-        match self.response {
-            Response::Create(_) => Err(WebAuthnError::IncorrectResponseType),
-            Response::Get(ref resp) => {
-                // (5) Verify the credential id in the request matches the credential id
-                // in the response
-                // TODO
-
-                // (6) Verify the credential id in the response is a credential owned by
-                // the requesting user
-                // TODO
-
-                // (7 / 20.1) Retrieve and covert pubkey into the correct format
-                let key_bytes = base64::decode_config(&pubkey, base64::URL_SAFE)?;
-
-                resp.validate(WebAuthnType::Get, cfg, challenge, key_bytes)
-            }
-        }
+    fn response(&self) -> &Response {
+        &self.response
     }
 }

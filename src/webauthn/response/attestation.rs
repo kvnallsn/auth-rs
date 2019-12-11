@@ -4,7 +4,7 @@ mod error;
 mod fidou2f;
 
 pub use self::{error::AttestationError, fidou2f::U2fError};
-use crate::{webauthn::response::auth_data::AuthData, WebAuthnError};
+use crate::webauthn::{response::auth_data::AuthData, WebAuthnError};
 use serde::Deserialize;
 
 /// Different types of attestation have different ways to authenticate/validate
