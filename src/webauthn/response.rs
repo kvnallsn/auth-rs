@@ -60,7 +60,7 @@ pub fn authenticate<S: Into<String>>(
         // TODO
 
         // (7 / 20.1) Retrieve and covert pubkey into the correct format
-        resp.validate(WebAuthnType::Get, config, challenge, devices)
+        resp.validate(WebAuthnType::Get, config, challenge, &form.id, devices)
     } else {
         Err(WebAuthnError::IncorrectResponseType)
     }
@@ -146,6 +146,7 @@ impl GetResponse {
         ty: WebAuthnType,
         cfg: &WebAuthnConfig,
         challenge: S,
+        id: &str,
         devices: &[WebAuthnDevice],
     ) -> Result<(), WebAuthnError> {
         // (10 - 14) Verify Client Data
@@ -169,9 +170,11 @@ impl GetResponse {
         verification_data.extend_from_slice(hash.as_ref());
 
         // look up pub-key for cred id in response
-        let cred_id = auth_data.credential_id()?;
-        let mut matching_devices: Vec<&WebAuthnDevice> =
-            devices.iter().filter(|d| d.id() == cred_id).collect();
+        let cred_id = base64::decode_config(id, base64::URL_SAFE_NO_PAD)?;
+        let mut matching_devices: Vec<&WebAuthnDevice> = devices
+            .iter()
+            .filter(|d| d.id() == cred_id.as_slice())
+            .collect();
         if matching_devices.len() != 1 {
             return Err(WebAuthnError::DeviceNotFound);
         }

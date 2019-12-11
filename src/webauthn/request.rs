@@ -8,7 +8,7 @@ use crate::webauthn::{
     pk::{PublicKeyDescriptor, PublicKeyParams},
     rp::RelyingParty,
     user::{User, UserVerificationRequirement},
-    WebAuthnConfig, WebAuthnError,
+    WebAuthnConfig, WebAuthnDevice, WebAuthnError,
 };
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
@@ -148,7 +148,7 @@ pub struct AuthenticateRequest {
 }
 
 impl AuthenticateRequest {
-    pub fn new(config: &WebAuthnConfig, devices: Vec<PublicKeyDescriptor>) -> AuthenticateRequest {
+    pub fn new(config: &WebAuthnConfig, devices: Vec<WebAuthnDevice>) -> AuthenticateRequest {
         // generate a random challenge
         let mut challenge = vec![0; 32];
         rand::thread_rng().fill_bytes(&mut challenge);
@@ -157,7 +157,10 @@ impl AuthenticateRequest {
             challenge,
             timeout: None,
             rp_id: Some(config.id().to_owned()),
-            allow_credentials: devices,
+            allow_credentials: devices
+                .iter()
+                .map(|d| PublicKeyDescriptor::new(d.id().to_vec()))
+                .collect(),
             user_verification: UserVerificationRequirement::Preferred,
         }
     }
