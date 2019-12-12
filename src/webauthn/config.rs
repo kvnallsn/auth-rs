@@ -5,7 +5,7 @@ use super::rp::RelyingParty;
 /// High Level configuration object that can be utilized to set
 /// information about the server ("Relying Party")
 #[derive(Clone, Debug)]
-pub struct WebAuthnConfig {
+pub struct Config {
     /// The full path (scheme, host, port, domain) of the server
     rp_origin: String,
 
@@ -13,14 +13,14 @@ pub struct WebAuthnConfig {
     rp_id: String,
 }
 
-impl WebAuthnConfig {
-    pub fn new<S: Into<String>>(origin: S) -> WebAuthnConfig {
+impl Config {
+    pub fn new<S: Into<String>>(origin: S) -> Self {
         let origin = origin.into();
         let id = origin.clone();
         let (_, uri) = id.split_at(id.find("://").map(|i| i + 3).unwrap_or(0));
         let (domain, _) = uri.split_at(uri.find("/").unwrap_or(uri.len()));
 
-        WebAuthnConfig {
+        Config {
             rp_origin: origin,
             rp_id: domain.to_owned(),
         }
@@ -50,13 +50,13 @@ impl WebAuthnConfig {
     }
 }
 
-impl Into<RelyingParty> for &WebAuthnConfig {
+impl Into<RelyingParty> for &Config {
     fn into(self) -> RelyingParty {
         RelyingParty::builder(self).finish()
     }
 }
 
-impl Into<RelyingParty> for WebAuthnConfig {
+impl Into<RelyingParty> for Config {
     fn into(self) -> RelyingParty {
         RelyingParty::builder(&self).finish()
     }

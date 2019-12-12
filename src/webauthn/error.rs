@@ -8,7 +8,7 @@ use base64::DecodeError;
 use std::fmt;
 
 #[derive(Debug)]
-pub enum WebAuthnError {
+pub enum Error {
     IncorrectResponseType,
     InvalidPublicKey,
     SignatureFailed,
@@ -21,63 +21,63 @@ pub enum WebAuthnError {
     CborError(serde_cbor::Error),
 }
 
-impl fmt::Display for WebAuthnError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            WebAuthnError::IncorrectResponseType => write!(f, "Incorrect Response Type"),
-            WebAuthnError::InvalidPublicKey => write!(f, "Invalid public key"),
-            WebAuthnError::SignatureFailed => write!(f, "Signature failed"),
-            WebAuthnError::DeviceNotFound => write!(f, "Device not found"),
-            WebAuthnError::AuthenticationError(e) => write!(f, "{}", e),
-            WebAuthnError::ClientData(e) => write!(f, "{}", e),
-            WebAuthnError::Attestation(e) => write!(f, "{}", e),
-            WebAuthnError::Base64Error(e) => write!(f, "{}", e),
-            WebAuthnError::JsonError(e) => write!(f, "{}", e),
-            WebAuthnError::CborError(e) => write!(f, "{}", e),
+            Error::IncorrectResponseType => write!(f, "Incorrect Response Type"),
+            Error::InvalidPublicKey => write!(f, "Invalid public key"),
+            Error::SignatureFailed => write!(f, "Signature failed"),
+            Error::DeviceNotFound => write!(f, "Device not found"),
+            Error::AuthenticationError(e) => write!(f, "{}", e),
+            Error::ClientData(e) => write!(f, "{}", e),
+            Error::Attestation(e) => write!(f, "{}", e),
+            Error::Base64Error(e) => write!(f, "{}", e),
+            Error::JsonError(e) => write!(f, "{}", e),
+            Error::CborError(e) => write!(f, "{}", e),
         }
     }
 }
 
-impl std::error::Error for WebAuthnError {}
+impl std::error::Error for Error {}
 
-impl From<AuthError> for WebAuthnError {
-    fn from(e: AuthError) -> WebAuthnError {
-        WebAuthnError::AuthenticationError(e)
+impl From<AuthError> for Error {
+    fn from(e: AuthError) -> Error {
+        Error::AuthenticationError(e)
     }
 }
 
-impl From<CoseError> for WebAuthnError {
-    fn from(_: CoseError) -> WebAuthnError {
-        WebAuthnError::InvalidPublicKey
+impl From<CoseError> for Error {
+    fn from(_: CoseError) -> Error {
+        Error::InvalidPublicKey
     }
 }
 
-impl From<ClientDataError> for WebAuthnError {
-    fn from(e: ClientDataError) -> WebAuthnError {
-        WebAuthnError::ClientData(e)
+impl From<ClientDataError> for Error {
+    fn from(e: ClientDataError) -> Error {
+        Error::ClientData(e)
     }
 }
 
-impl From<AttestationError> for WebAuthnError {
-    fn from(e: AttestationError) -> WebAuthnError {
-        WebAuthnError::Attestation(e)
+impl From<AttestationError> for Error {
+    fn from(e: AttestationError) -> Error {
+        Error::Attestation(e)
     }
 }
 
-impl From<DecodeError> for WebAuthnError {
-    fn from(e: DecodeError) -> WebAuthnError {
-        WebAuthnError::Base64Error(e)
+impl From<DecodeError> for Error {
+    fn from(e: DecodeError) -> Error {
+        Error::Base64Error(e)
     }
 }
 
-impl From<serde_json::Error> for WebAuthnError {
-    fn from(e: serde_json::Error) -> WebAuthnError {
-        WebAuthnError::JsonError(e)
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Error {
+        Error::JsonError(e)
     }
 }
 
-impl From<serde_cbor::Error> for WebAuthnError {
-    fn from(e: serde_cbor::Error) -> WebAuthnError {
-        WebAuthnError::CborError(e)
+impl From<serde_cbor::Error> for Error {
+    fn from(e: serde_cbor::Error) -> Error {
+        Error::CborError(e)
     }
 }

@@ -4,7 +4,7 @@ mod error;
 mod fidou2f;
 
 pub use self::{error::AttestationError, fidou2f::U2fError};
-use crate::webauthn::{response::auth_data::AuthData, WebAuthnError};
+use crate::webauthn::{response::auth_data::AuthData, Error};
 use serde::Deserialize;
 
 /// Different types of attestation have different ways to authenticate/validate
@@ -34,7 +34,7 @@ struct AttestationData {
 ///
 /// # Arguments
 /// * `data` - The base64url-decoded attestation_data field
-pub fn parse(data: Vec<u8>) -> Result<(AuthData, AttestationFormat), WebAuthnError> {
+pub fn parse(data: Vec<u8>) -> Result<(AuthData, AttestationFormat), Error> {
     let inner = serde_cbor::from_slice::<AttestationData>(&data)?;
     let auth_data = AuthData::parse(inner.auth_data)?;
     Ok((auth_data, inner.fmt))

@@ -1,6 +1,6 @@
 //! Client data related code
 
-use crate::webauthn::{response::WebAuthnType, WebAuthnConfig};
+use crate::webauthn::{response::WebAuthnType, Config};
 use serde::Deserialize;
 use std::fmt;
 
@@ -101,7 +101,7 @@ impl ClientData {
     pub fn validate<S: Into<String>>(
         &self,
         ty: WebAuthnType,
-        cfg: &WebAuthnConfig,
+        cfg: &Config,
         challenge: S,
     ) -> Result<(), ClientDataError> {
         if self.ty != ty {

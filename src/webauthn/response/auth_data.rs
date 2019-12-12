@@ -2,7 +2,10 @@
 
 use crate::{
     common::cose::CoseKey,
-    webauthn::response::{attestation::U2fError, AttestationError, WebAuthnConfig},
+    webauthn::{
+        response::{attestation::U2fError, AttestationError},
+        Config,
+    },
 };
 use ring::digest::{digest, SHA256};
 use std::fmt;
@@ -152,7 +155,7 @@ impl AuthData {
     }
 
     /// Verify this data
-    pub fn validate(&self, cfg: &WebAuthnConfig) -> Result<(), AuthError> {
+    pub fn validate(&self, cfg: &Config) -> Result<(), AuthError> {
         // Verify the relying party's id matches what we configured
         let rp_id_hash = digest(&SHA256, cfg.id().as_bytes());
         if self.rp_id_hash != rp_id_hash.as_ref() {

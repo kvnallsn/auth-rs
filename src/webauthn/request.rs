@@ -8,7 +8,7 @@ use crate::webauthn::{
     pk::{PublicKeyDescriptor, PublicKeyParams},
     rp::RelyingParty,
     user::{User, UserVerificationRequirement},
-    WebAuthnConfig, WebAuthnDevice, WebAuthnError,
+    Config, Device, Error,
 };
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 /// `navigator.credentials.create()` on the client side.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WebAuthnRegisterRequest {
+pub struct RegisterRequest {
     /// Random, cryptographically secure string used to generate client's attestation object
     challenge: Vec<u8>,
 
@@ -49,7 +49,7 @@ pub struct WebAuthnRegisterRequest {
 }
 
 #[allow(dead_code)]
-impl WebAuthnRegisterRequest {
+impl RegisterRequest {
     /// Creates a new options struct that can be sent to the client and generate
     /// a new client credential using the available authenticator.
     ///
@@ -60,7 +60,7 @@ impl WebAuthnRegisterRequest {
         let mut challenge = vec![0; 32];
         rand::thread_rng().fill_bytes(&mut challenge);
 
-        WebAuthnRegisterRequest {
+        RegisterRequest {
             challenge,
             rp: rp.into(),
             user: user.into(),
@@ -112,7 +112,7 @@ impl WebAuthnRegisterRequest {
     /// This method is (usually) not required when working with web frameworks
     /// like Rocket or Actix-Web since the framework (usually) has it's own
     /// methods for returning JSON data
-    pub fn json(&self) -> Result<String, WebAuthnError> {
+    pub fn json(&self) -> Result<String, Error> {
         Ok(serde_json::to_string(self)?)
     }
 }
@@ -148,7 +148,7 @@ pub struct AuthenticateRequest {
 }
 
 impl AuthenticateRequest {
-    pub fn new(config: &WebAuthnConfig, devices: Vec<WebAuthnDevice>) -> AuthenticateRequest {
+    pub fn new(config: &Config, devices: Vec<Device>) -> AuthenticateRequest {
         // generate a random challenge
         let mut challenge = vec![0; 32];
         rand::thread_rng().fill_bytes(&mut challenge);
@@ -173,10 +173,10 @@ impl AuthenticateRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::webauthn::{User, WebAuthnConfig};
+    use crate::webauthn::{Config, User};
 
-    fn setup() -> (WebAuthnConfig, User) {
-        let config = WebAuthnConfig::new("http:://www.example.com");
+    fn setup() -> (Config, User) {
+        let config = Config::new("http:://www.example.com");
         let user = User::new(vec![0, 1, 2, 3], "user", "user");
         (config, user)
     }
@@ -184,39 +184,38 @@ mod tests {
     #[test]
     fn pk_create_options_default() {
         let (config, user) = setup();
-        let _ = WebAuthnRegisterRequest::new(config, user);
+        let _ = RegisterRequest::new(config, user);
     }
 
     #[test]
     fn pk_create_options_default_config_reference() {
         let (config, user) = setup();
-        let _ = WebAuthnRegisterRequest::new(&config, user);
+        let _ = RegisterRequest::new(&config, user);
     }
 
     #[test]
     fn pk_create_options_timeout() {
         let (config, user) = setup();
-        let _ = WebAuthnRegisterRequest::new(config, user).set_timeout(10000);
+        let _ = RegisterRequest::new(config, user).set_timeout(10000);
     }
 
     #[test]
     fn pk_create_options_auth_criteria() {
         let (config, user) = setup();
-        let _ = WebAuthnRegisterRequest::new(config, user)
-            .set_auth_criteria(AuthenticatorCritera::default());
+        let _ =
+            RegisterRequest::new(config, user).set_auth_criteria(AuthenticatorCritera::default());
     }
 
     #[test]
     fn pk_create_options_attestation() {
         let (config, user) = setup();
-        let _ = WebAuthnRegisterRequest::new(config, user)
-            .set_attestation(AttestationPreference::Indirect);
+        let _ = RegisterRequest::new(config, user).set_attestation(AttestationPreference::Indirect);
     }
 
     #[test]
     fn pk_create_options_all() {
         let (config, user) = setup();
-        let _ = WebAuthnRegisterRequest::new(config, user)
+        let _ = RegisterRequest::new(config, user)
             .set_timeout(10010)
             .set_attestation(AttestationPreference::Indirect)
             .set_auth_criteria(AuthenticatorCritera::default());
@@ -225,7 +224,7 @@ mod tests {
     #[test]
     fn pk_create_json() {
         let (config, user) = setup();
-        let result = WebAuthnRegisterRequest::new(config, user)
+        let result = RegisterRequest::new(config, user)
             .set_timeout(10010)
             .set_attestation(AttestationPreference::Indirect)
             .set_auth_criteria(AuthenticatorCritera::default())

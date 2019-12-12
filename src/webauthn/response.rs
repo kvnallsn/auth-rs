@@ -12,7 +12,7 @@ use crate::{
     parsers,
     webauthn::{
         response::{attestation::AttestationFormat, auth_data::AuthData},
-        WebAuthnConfig, WebAuthnDevice, WebAuthnError, WebAuthnType,
+        Config, Device, Error, WebAuthnType,
     },
 };
 
@@ -29,28 +29,28 @@ use untrusted::Input;
 /// and the associated public key as (credential_id, pub_key).  In the event the response
 /// contained is not a create response, returns an `IncorrectResponseType` response
 pub fn register<S: Into<String>>(
-    form: WebAuthnResponse,
-    config: &WebAuthnConfig,
+    form: Response,
+    config: &Config,
     challenge: S,
-) -> Result<WebAuthnDevice, WebAuthnError> {
-    if let Response::Create(ref resp) = form.response() {
+) -> Result<Device, Error> {
+    if let ResponseType::Create(ref resp) = form.response() {
         let (id, pk, count) = resp.validate(WebAuthnType::Create, config, challenge)?;
-        Ok(WebAuthnDevice::new(id, pk, count))
+        Ok(Device::new(id, pk, count))
     } else {
-        Err(WebAuthnError::IncorrectResponseType)
+        Err(Error::IncorrectResponseType)
     }
 }
 
 /// Validates  response recieved after a call to `navigator.credentials.get()` (i.e.,
 /// logging in with a token)
 pub fn authenticate<S: Into<String>>(
-    form: WebAuthnResponse,
-    config: &WebAuthnConfig,
+    form: Response,
+    config: &Config,
     challenge: S,
-    devices: &[WebAuthnDevice],
-) -> Result<(), WebAuthnError> {
+    devices: &[Device],
+) -> Result<(), Error> {
     // authenticates against a set of tokens
-    if let Response::Get(ref resp) = form.response() {
+    if let ResponseType::Get(ref resp) = form.response() {
         // (5) Verify the credential id in the request matches the credential id
         // in the response
         // TODO
@@ -62,13 +62,13 @@ pub fn authenticate<S: Into<String>>(
         // (7 / 20.1) Retrieve and covert pubkey into the correct format
         resp.validate(WebAuthnType::Get, config, challenge, &form.id, devices)
     } else {
-        Err(WebAuthnError::IncorrectResponseType)
+        Err(Error::IncorrectResponseType)
     }
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type")]
-enum Response {
+enum ResponseType {
     #[serde(rename = "create")]
     Create(CreateResponse),
 
@@ -91,9 +91,9 @@ impl CreateResponse {
     fn validate<S: Into<String>>(
         &self,
         ty: WebAuthnType,
-        cfg: &WebAuthnConfig,
+        cfg: &Config,
         challenge: S,
-    ) -> Result<(Vec<u8>, Vec<u8>, u32), WebAuthnError> {
+    ) -> Result<(Vec<u8>, Vec<u8>, u32), Error> {
         // Get the client data the SHA256 hash of it
         let client_data = base64::decode_config(&self.client_data_json, base64::URL_SAFE)?;
         let client_data_hash = digest(&SHA256, &client_data);
@@ -144,11 +144,11 @@ impl GetResponse {
     fn validate<S: Into<String>>(
         &self,
         ty: WebAuthnType,
-        cfg: &WebAuthnConfig,
+        cfg: &Config,
         challenge: S,
         id: &str,
-        devices: &[WebAuthnDevice],
-    ) -> Result<(), WebAuthnError> {
+        devices: &[Device],
+    ) -> Result<(), Error> {
         // (10 - 14) Verify Client Data
         let client_data: ClientData = serde_json::from_slice(&self.client_data_json)?;
         client_data.validate(ty, cfg, challenge)?;
@@ -171,12 +171,12 @@ impl GetResponse {
 
         // look up pub-key for cred id in response
         let cred_id = base64::decode_config(id, base64::URL_SAFE_NO_PAD)?;
-        let mut matching_devices: Vec<&WebAuthnDevice> = devices
+        let mut matching_devices: Vec<&Device> = devices
             .iter()
             .filter(|d| d.id() == cred_id.as_slice())
             .collect();
         if matching_devices.len() != 1 {
-            return Err(WebAuthnError::DeviceNotFound);
+            return Err(Error::DeviceNotFound);
         }
         let device = matching_devices.remove(0);
 
@@ -186,7 +186,7 @@ impl GetResponse {
             Input::from(&verification_data),
             Input::from(&self.signature),
         )
-        .map_err(|_| WebAuthnError::SignatureFailed)?;
+        .map_err(|_| Error::SignatureFailed)?;
 
         // (21) Verify signedCount
         if device.count() != auth_data.count() {
@@ -205,7 +205,7 @@ impl GetResponse {
 /// after a call to `navigator.credentials.create()` on the client side
 /// has been completed.  All fields are required to be present
 #[derive(Clone, Debug, Deserialize)]
-pub struct WebAuthnResponse {
+pub struct Response {
     /// Base64-encoded id
     id: String,
 
@@ -214,25 +214,25 @@ pub struct WebAuthnResponse {
     raw_id: String,
 
     /// The contained response for credential registration
-    response: Response,
+    response: ResponseType,
 
     /// The type of credential we tried to register
     #[serde(alias = "type")]
     ty: String,
 }
 
-impl WebAuthnResponse {
+impl Response {
     /// Returns the type of message contained in this response, either a response
     /// to a `create()` call (i.e., register) or a response to a `get()` call
     /// (i.e., authenticate/login)
     pub fn ty(&self) -> WebAuthnType {
         match self.response {
-            Response::Create(_) => WebAuthnType::Create,
-            Response::Get(_) => WebAuthnType::Get,
+            ResponseType::Create(_) => WebAuthnType::Create,
+            ResponseType::Get(_) => WebAuthnType::Get,
         }
     }
 
-    fn response(&self) -> &Response {
+    fn response(&self) -> &ResponseType {
         &self.response
     }
 }

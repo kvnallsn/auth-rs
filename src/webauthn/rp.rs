@@ -1,6 +1,6 @@
 //! Implementation of the Relying Party (aka server)
 
-use crate::webauthn::WebAuthnConfig;
+use crate::webauthn::Config;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -20,7 +20,7 @@ pub struct RelyingPartyBuilder {
 
 impl RelyingPartyBuilder {
     /// Creates a new RelyingPartyBuilder with the specified name
-    fn new(cfg: &WebAuthnConfig) -> RelyingPartyBuilder {
+    fn new(cfg: &Config) -> RelyingPartyBuilder {
         RelyingPartyBuilder {
             rp_name: "".to_string(),
             rp_id: Some(cfg.id().to_owned()),
@@ -72,7 +72,7 @@ impl RelyingParty {
     ///
     /// # Arguments
     /// * `name` - Name of the company/app/program/etc.
-    pub fn builder(cfg: &WebAuthnConfig) -> RelyingPartyBuilder {
+    pub fn builder(cfg: &Config) -> RelyingPartyBuilder {
         RelyingPartyBuilder::new(cfg)
     }
 }
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn create_relying_party() {
-        let cfg = WebAuthnConfig::new("https://www.example.com");
+        let cfg = Config::new("https://www.example.com");
         let _ = RelyingParty::builder(&cfg).finish();
     }
 }

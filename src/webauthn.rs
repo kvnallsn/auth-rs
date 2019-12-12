@@ -1,19 +1,20 @@
 //! WebAuthn Module
 
-pub mod pk;
-pub mod request;
-pub mod response;
-
 mod config;
 mod error;
+mod pk;
+mod request;
+mod response;
 mod rp;
 mod user;
 
 #[cfg(feature = "web")]
 pub mod web;
 
-pub use config::WebAuthnConfig;
-pub use error::WebAuthnError;
+pub use config::Config;
+pub use error::Error;
+pub use request::{AuthenticateRequest, RegisterRequest};
+pub use response::{authenticate, register, Response};
 pub use user::User;
 
 use serde::{Deserialize, Serialize};
@@ -53,7 +54,7 @@ impl WebAuthnType {
 /// The information contained in this struct is everything needed to authenticate
 /// a user against a specific token
 #[derive(Debug, Deserialize, Serialize)]
-pub struct WebAuthnDevice {
+pub struct Device {
     /// The devices's credential id. A unique value per device
     id: Vec<u8>,
 
@@ -64,15 +65,15 @@ pub struct WebAuthnDevice {
     count: u32,
 }
 
-impl WebAuthnDevice {
+impl Device {
     /// Creates a new `WebAuthnDevice` with the specified parameters
     ///
     /// # Arguments
     /// * `id` - Credential Id of the device
     /// * `public_key` - Raw public key (as bytes) corresponding to the id
     /// * `count` - Number of times this key has been used
-    pub fn new(id: Vec<u8>, public_key: Vec<u8>, count: u32) -> WebAuthnDevice {
-        WebAuthnDevice {
+    pub fn new(id: Vec<u8>, public_key: Vec<u8>, count: u32) -> Device {
+        Device {
             id,
             pk: public_key,
             count,
@@ -98,19 +99,19 @@ mod tests {
 
     #[test]
     fn build_webauthn_config() {
-        let config = WebAuthnConfig::new("http://app.example.com");
+        let config = Config::new("http://app.example.com");
         assert_eq!(config.id(), "app.example.com");
     }
 
     #[test]
     fn build_webauthn_config_with_trailing_slash() {
-        let config = WebAuthnConfig::new("http://app.example.com/");
+        let config = Config::new("http://app.example.com/");
         assert_eq!(config.id(), "app.example.com");
     }
 
     #[test]
     fn build_webauthn_config_no_scheme() {
-        let config = WebAuthnConfig::new("app.example.com/");
+        let config = Config::new("app.example.com/");
         assert_eq!(config.id(), "app.example.com");
     }
 }

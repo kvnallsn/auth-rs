@@ -69,19 +69,6 @@ pub struct PublicKeyCredential {
     pub id: Vec<u8>,
 }
 
-impl PublicKeyCredential {
-    /// Creates a new public key credential from a returned response
-    ///
-    /// # Arguments
-    /// * `id` - The id of the public key
-    pub fn new(id: Vec<u8>) -> PublicKeyCredential {
-        PublicKeyCredential {
-            ty: PublicKeyCredentialType::PublicKey,
-            id,
-        }
-    }
-}
-
 /// Different types of connections that authenticators can have
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Transport {
