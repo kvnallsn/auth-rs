@@ -1,4 +1,74 @@
-//! WebAuthn Module
+//! Server-Side support for the Web Authentication (WebAuthn) specification written by
+//! the W3C and FIDO Alliance.  Allows APIs to register and authenticate users with
+//! public key cryptography instead of passwords.
+//!
+//! WebAuthn allows APIs to utilize strong authenticators builtin to modern devices
+//! (such as Windows Hello or Apple's Touch ID) instead of a password. The device creates
+//! a public/private keypair.  The public key (along with a randomly-generated credential id)
+//! is set to the API while the private key never leaves the device.  The API can then use
+//! the public key to authenticate the user for future sign-ins.
+//!
+//! # Example
+//!
+//! The following example uses [Rocket](https://rocket.rs) to build a simple API with four
+//! endpoints: a get/post pair for registering a credential and get/post pair for authenticating
+//! a credential. For the backing store, HTTP cookies are used.  For the full example, see ...
+//!
+//! ```ignore
+//! use auth_rs::webauth::{self, AuthenticateRequest, RegisterRequest};
+//! use rocket::{get, post, State};
+//! use rocket_contrib::{json, json::{Json, JsonValue}};
+//!
+//! #[get("/fido/register")]
+//! fn register_request(cfg: State<Config>, user: User, mut cookies: Cookies) -> Json<RegisterRequest> {
+//!     let req = RegisterRequest::new(&cfg, user);
+//!
+//!     // Save the challenge in a cookie for register post handler to validate
+//!     cookies.add(Cookie::new("X-WebAuthn-Challenge", req.challenge()));
+//!     Json(req)
+//! }
+//!
+//! #[post("/fido/register", data = "<form>")]
+//! fn register_post(cfg: State<Config>, form: Json<webauthn::Response>, mut cookies: Cookies) -> JsonValue {
+//!     let form = form.into_inner();
+//!
+//!     // Retrieve the challenge from the cookie (or database/similar store) then delete the cookie
+//!     let challenge = cookies.get("X-WebAuthn-Challenge").unwrap().value();
+//!     cookies.remove(Cookie::named("X-WebAuthn-Challenge"));
+//!
+//!     // Attempt to validate the register request
+//!     match webauthn::register(form, &cfg, challenge) {
+//!         Ok(device) => { /* save device in backing database/etc */ }
+//!         Err(e) => panic!("failed to validate register request: {}", e),
+//!     }
+//! }
+//!
+//! #[get("/fido/login")]
+//! fn register_request(cfg: State<Config>, mut cookies: Cookies) -> Json<AuthenticateRequest> {
+//!     let devices = /* load all registered devices for a user from backing database/etc. */;
+//!     let req = AuthenticateRequest::new(&cfg, vec![devices]);
+//!
+//!     // Save the challenge in a cookie for register post handler to validate
+//!     cookies.add(Cookie::new("X-WebAuthn-Challenge", req.challenge()));
+//!     Json(req)
+//! }
+//!
+//! #[post("/fido/login", data = "<form>")]
+//! fn register_post(cfg: State<Config>, form: Json<webauthn::Response>, mut cookies: Cookies) -> JsonValue {
+//!     let form = form.into_inner();
+//!
+//!     // Retrieve the challenge from the cookie (or database/similar store) then delete the cookie
+//!     let challenge = cookies.get("X-WebAuthn-Challenge").unwrap().value();
+//!     cookies.remove(Cookie::named("X-WebAuthn-Challenge"));
+//!
+//!     let devices = /* load all registered devices for a user from backing database/etc. */;
+//!      
+//!     match webauthn::authenticate(form. &cfg, devices) {
+//!         Ok(_) => /* success! finish logging user in */,
+//!         Err(e) => panic!("failed to validate login request: {}", e),
+//!     }
+//! }
+//! ```
 
 mod config;
 mod error;
