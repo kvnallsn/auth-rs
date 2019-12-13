@@ -2,6 +2,26 @@
 
 use serde::{Deserialize, Serialize};
 
+pub trait WebAuthnUser {
+    /// User Handle (e.g., user id) that can uniquely identify a user in the service/api.
+    /// Generally, this can be mapped to a primary key or similiar construct (e.g., uuid)
+    fn id(&self) -> &[u8];
+
+    /// A human-palatable or user-friednlt name for the user account, intended for
+    /// display only. Should be selected by the user (e.g., username, email, etc.)
+    fn name(&self) -> &str;
+
+    /// Turns any trait implementing WebAuthnUser into a serialize struct
+    /// that can be sent to a client WebAuthn implemenation
+    fn to_user(&self) -> User {
+        User {
+            id: self.id().to_vec(),
+            name: self.name().to_owned(),
+            display_name: self.name().to_owned(),
+        }
+    }
+}
+
 /// A FidoUser represents information about a user that will be sent
 /// to the client
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -37,26 +57,6 @@ impl User {
             display_name,
         }
     }
-}
-
-/// Different types of User Verification levels supported by different types
-/// of authenticators (e.g., Yubikey, platform, etc.)
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum UserVerificationRequirement {
-    /// User Verification is required and will fail if the response does not
-    /// have the `UV flag` set
-    #[serde(rename = "required")]
-    Required,
-
-    /// Prefers User Verification if possible, but will not fail if the response
-    /// does not have the `UV flag` set
-    #[serde(rename = "preferred")]
-    Preferred,
-
-    /// Do not want any User Verification.  Useful to minimze disruption to the
-    /// user interaction flow
-    #[serde(rename = "discouraged")]
-    Discouraged,
 }
 
 #[cfg(test)]

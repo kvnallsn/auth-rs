@@ -7,9 +7,21 @@ use serde::{de, Deserialize, Deserializer};
 ///
 /// # Argumnets
 /// * `d` - Value to deserialize
-pub fn non_empty_str<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
+#[allow(dead_code)]
+pub fn optional_str<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
     let o: Option<String> = Option::deserialize(d)?;
     Ok(o.filter(|s| !s.is_empty()))
+}
+
+pub fn optional_base64<'de, D: Deserializer<'de>>(d: D) -> Result<Option<Vec<u8>>, D::Error> {
+    let o: Option<String> = Option::deserialize(d)?;
+    Ok(match o {
+        Some(enc) if enc.is_empty() => None,
+        Some(enc) => {
+            Some(base64::decode_config(&enc, base64::STANDARD).map_err(de::Error::custom)?)
+        }
+        None => None,
+    })
 }
 
 /// Deserializes a base64url-enocded string into the underlying bytes

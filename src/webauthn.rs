@@ -73,10 +73,11 @@
 mod config;
 mod error;
 mod pk;
-mod request;
 mod response;
 mod rp;
 mod user;
+
+pub mod request;
 
 #[cfg(feature = "web")]
 pub mod web;
@@ -85,7 +86,7 @@ pub use config::Config;
 pub use error::Error;
 pub use request::{AuthenticateRequest, RegisterRequest};
 pub use response::{authenticate, register, Response};
-pub use user::User;
+pub use user::WebAuthnUser;
 
 use serde::{Deserialize, Serialize};
 use std::fmt;

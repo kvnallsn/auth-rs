@@ -2,16 +2,20 @@
 
 mod attestation;
 mod authenticator;
+mod user;
 
-use self::{attestation::AttestationPreference, authenticator::AuthenticatorCritera};
 use crate::webauthn::{
     pk::{PublicKeyDescriptor, PublicKeyParams},
     rp::RelyingParty,
-    user::{User, UserVerificationRequirement},
-    Config, Device, Error,
+    user::User,
+    Config, Device, Error, WebAuthnUser,
 };
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+
+pub use self::attestation::AttestationPreference;
+pub use self::authenticator::AuthenticatorCritera;
+pub use self::user::UserVerification;
 
 /// Options for creating a new PublicKey.  This struct is passed to
 /// `navigator.credentials.create()` on the client side.
@@ -56,14 +60,14 @@ impl RegisterRequest {
     /// # Arguments
     /// * `rp` - Name of the Relying Party
     /// * `user` - The user to generate an attestation / credential for
-    pub fn new<P: Into<RelyingParty>, U: Into<User>>(rp: P, user: U) -> Self {
+    pub fn new<P: Into<RelyingParty>, U: WebAuthnUser>(rp: P, user: &U) -> Self {
         let mut challenge = vec![0; 32];
         rand::thread_rng().fill_bytes(&mut challenge);
 
         RegisterRequest {
             challenge,
             rp: rp.into(),
-            user: user.into(),
+            user: user.to_user(),
             timeout: None,
             authenticator_selection: AuthenticatorCritera::default(),
             attestation: AttestationPreference::Direct,
@@ -144,7 +148,7 @@ pub struct AuthenticateRequest {
     /// Relying Party's requirements regarding user verification for the `get()` operation.
     /// Eligible authenticators are filtered to only those capable of satisfying this requirement.
     #[serde(rename = "userVerification")]
-    user_verification: UserVerificationRequirement,
+    user_verification: UserVerification,
 }
 
 impl AuthenticateRequest {
@@ -161,19 +165,24 @@ impl AuthenticateRequest {
                 .iter()
                 .map(|d| PublicKeyDescriptor::new(d.id().to_vec()))
                 .collect(),
-            user_verification: UserVerificationRequirement::Preferred,
+            user_verification: UserVerification::Preferred,
         }
     }
 
     pub fn challenge(&self) -> String {
         base64::encode_config(&self.challenge, base64::URL_SAFE_NO_PAD)
     }
-}
 
+    pub fn set_user_verification(&mut self, uv: UserVerification) -> &mut Self {
+        self.user_verification = uv;
+        self
+    }
+}
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::webauthn::{Config, User};
+    use crate::webauthn::Config;
 
     fn setup() -> (Config, User) {
         let config = Config::new("http:://www.example.com");
@@ -232,3 +241,4 @@ mod tests {
         assert!(result.is_ok())
     }
 }
+*/

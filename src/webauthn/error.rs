@@ -13,6 +13,8 @@ pub enum Error {
     InvalidPublicKey,
     SignatureFailed,
     DeviceNotFound,
+    InvalidDeviceId,
+    IncorrectUser(Vec<u8>, Vec<u8>),
     AuthenticationError(AuthError),
     ClientData(ClientDataError),
     Attestation(AttestationError),
@@ -28,6 +30,12 @@ impl fmt::Display for Error {
             Error::InvalidPublicKey => write!(f, "Invalid public key"),
             Error::SignatureFailed => write!(f, "Signature failed"),
             Error::DeviceNotFound => write!(f, "Device not found"),
+            Error::InvalidDeviceId => write!(f, "Invalid device id returned in response"),
+            Error::IncorrectUser(a, b) => write!(
+                f,
+                "User in response does not match expected user: got: {:?}, expected: {:?}",
+                a, b
+            ),
             Error::AuthenticationError(e) => write!(f, "{}", e),
             Error::ClientData(e) => write!(f, "{}", e),
             Error::Attestation(e) => write!(f, "{}", e),

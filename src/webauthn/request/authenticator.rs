@@ -1,6 +1,6 @@
 //! Authenticator Criteria
 
-use crate::webauthn::user::UserVerificationRequirement;
+use crate::webauthn::request::UserVerification;
 use serde::{Deserialize, Serialize};
 use std::default::Default;
 
@@ -40,7 +40,7 @@ pub struct AuthenticatorCritera {
     ///
     /// Default: Preferred
     #[serde(rename = "userVerification")]
-    pub user_verification: UserVerificationRequirement,
+    pub user_verification: UserVerification,
 }
 
 impl Default for AuthenticatorCritera {
@@ -48,7 +48,7 @@ impl Default for AuthenticatorCritera {
         AuthenticatorCritera {
             authenticator_attachement: None,
             require_resident_key: false,
-            user_verification: UserVerificationRequirement::Preferred,
+            user_verification: UserVerification::Preferred,
         }
     }
 }

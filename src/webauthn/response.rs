@@ -12,7 +12,7 @@ use crate::{
     parsers,
     webauthn::{
         response::{attestation::AttestationFormat, auth_data::AuthData},
-        Config, Device, Error, WebAuthnType,
+        Config, Device, Error, WebAuthnType, WebAuthnUser,
     },
 };
 
@@ -88,24 +88,45 @@ pub fn register<S: Into<String>>(
 ///     Err(e) => println!("Failed to authenticate user: {}", e),
 /// }
 /// ```
-pub fn authenticate<S: Into<String>>(
+pub fn authenticate<S: Into<String>, U: WebAuthnUser>(
     form: Response,
     config: &Config,
     challenge: S,
+    user: &U,
     devices: &[Device],
 ) -> Result<(), Error> {
     // authenticates against a set of tokens
     if let ResponseType::Get(ref resp) = form.response() {
-        // (5) Verify the credential id in the request matches the credential id
-        // in the response
+        // (7.2-1) Verify the credential id in the request matches the credential id in the response
+        if devices
+            .iter()
+            .filter(|device| device.id() == form.raw_id.as_slice())
+            .count()
+            != 1
+        {
+            // Returned credential id does not match any accepted credentials
+            return Err(Error::InvalidDeviceId);
+        }
+
+        // (7.2-2) Verify the credential id in the response is owed by the requesting user
+        // (7.2-2a) User was identified before the authentication cermony: verify identifed user
+        // owns the credential source and userHandle matches what is expected
         // TODO
 
-        // (6) Verify the credential id in the response is a credential owned by
-        // the requesting user
+        // (7.2-2b) User was not identified before the authentication ceremony: verify user handle
+        // is present and that user owns this credential
         // TODO
 
-        // (7 / 20.1) Retrieve and covert pubkey into the correct format
-        resp.validate(WebAuthnType::Get, config, challenge, &form.id, devices)
+        // (7.2-3) Using credential id returned, look up the credential's public key
+        // (7.2 / 20.1) Retrieve and covert pubkey into the correct format
+        resp.validate(
+            WebAuthnType::Get,
+            config,
+            challenge,
+            &form.id,
+            user,
+            devices,
+        )
     } else {
         Err(Error::IncorrectResponseType)
     }
@@ -176,8 +197,8 @@ struct GetResponse {
 
     /// Base64url-encoded user handle returned from the authenticator
     #[serde(rename = "userHandle")]
-    #[serde(deserialize_with = "parsers::non_empty_str")]
-    user_handle: Option<String>,
+    #[serde(deserialize_with = "parsers::optional_base64")]
+    user_handle: Option<Vec<u8>>,
 
     /// Base64-encode JSON that the client passed to the call
     #[serde(rename = "clientDataJSON", alias = "clientDataJson")]
@@ -186,14 +207,31 @@ struct GetResponse {
 }
 
 impl GetResponse {
-    fn validate<S: Into<String>>(
+    fn validate<S: Into<String>, U: WebAuthnUser>(
         &self,
         ty: WebAuthnType,
         cfg: &Config,
         challenge: S,
         id: &str,
+        user: &U,
         devices: &[Device],
     ) -> Result<(), Error> {
+        // (7.2-2) Verify the credential id in the response is owed by the requesting user
+        // (7.2-2a) User was identified before the authentication cermony: verify identifed user
+        // owns the credential source and userHandle matches what is expected
+        if let Some(ref uid) = self.user_handle {
+            println!("Verifying user id");
+            if uid.as_slice() != user.id() {
+                return Err(Error::IncorrectUser(uid.clone(), user.id().to_vec()));
+            }
+        }
+
+        // (7.2-2b) User was not identified before the authentication ceremony: verify user handle
+        // is present and that user owns this credential
+        // TODO
+
+        // (7.2-3) Using credential id returned, look up the credential's public key
+
         // (10 - 14) Verify Client Data
         let client_data: ClientData = serde_json::from_slice(&self.client_data_json)?;
         client_data.validate(ty, cfg, challenge)?;
@@ -256,7 +294,8 @@ pub struct Response {
 
     /// Base64-encoded id (overriden in the public key response) without padding
     #[serde(alias = "rawId", alias = "rawID")]
-    raw_id: String,
+    #[serde(deserialize_with = "parsers::base64")]
+    raw_id: Vec<u8>,
 
     /// The contained response for credential registration
     response: ResponseType,
