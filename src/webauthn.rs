@@ -79,9 +79,6 @@ mod user;
 
 pub mod request;
 
-#[cfg(feature = "web")]
-pub mod web;
-
 pub use config::Config;
 pub use error::Error;
 pub use request::{AuthenticateRequest, RegisterRequest};

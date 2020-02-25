@@ -13,6 +13,7 @@ pub fn optional_str<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D
     Ok(o.filter(|s| !s.is_empty()))
 }
 
+#[allow(dead_code)]
 pub fn optional_base64<'de, D: Deserializer<'de>>(d: D) -> Result<Option<Vec<u8>>, D::Error> {
     let o: Option<String> = Option::deserialize(d)?;
     Ok(match o {
@@ -32,6 +33,7 @@ pub fn base64url<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
 }
 
 /// Deserializes a base64url-enocded string into the underlying bytes
+#[allow(dead_code)]
 pub fn base64<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
     let s: String = String::deserialize(d)?;
     Ok(base64::decode_config(&s, base64::STANDARD).map_err(de::Error::custom)?)
