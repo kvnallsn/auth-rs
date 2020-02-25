@@ -4,7 +4,6 @@ use crate::webauthn::response::{AuthData, AuthError};
 use ring::digest::Digest;
 use serde::Deserialize;
 use std::{fmt, ops::Deref};
-use untrusted::Input;
 use webpki::{EndEntityCert, ECDSA_P256_SHA256};
 
 #[derive(Clone, Debug)]
@@ -61,7 +60,7 @@ impl FidoU2fAttestation {
             return Err(U2fError::TooManyX509Certificates);
         }
 
-        EndEntityCert::from(Input::from(&self.x5c[0])).map_err(|_| U2fError::BadX509Certificate)
+        EndEntityCert::from(&self.x5c[0]).map_err(|_| U2fError::BadX509Certificate)
     }
 
     pub fn validate(
@@ -93,8 +92,8 @@ impl FidoU2fAttestation {
         // of [SEC1] with SHA-256 as the hash function used in step two.
         cert.verify_signature(
             &ECDSA_P256_SHA256,
-            Input::from(verification_data.as_slice()),
-            Input::from(self.sig.as_slice()),
+            verification_data.as_slice(),
+            self.sig.as_slice(),
         )?;
 
         // 7. Optionally, inspect x5c and consult externally provided knowledge to determine whether

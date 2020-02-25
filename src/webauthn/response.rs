@@ -19,7 +19,7 @@ use crate::{
 use client_data::ClientData;
 use ring::{
     digest::{digest, SHA256},
-    signature,
+    signature::{self, VerificationAlgorithm},
 };
 use serde::Deserialize;
 use untrusted::Input;
@@ -263,13 +263,13 @@ impl GetResponse {
         }
         let device = matching_devices.remove(0);
 
-        signature::verify(
-            &signature::ECDSA_P256_SHA256_ASN1,
-            Input::from(&device.public_key()),
-            Input::from(&verification_data),
-            Input::from(&self.signature),
-        )
-        .map_err(|_| Error::SignatureFailed)?;
+        signature::ECDSA_P256_SHA256_ASN1
+            .verify(
+                Input::from(&device.public_key()),
+                Input::from(&verification_data),
+                Input::from(&self.signature),
+            )
+            .map_err(|_| Error::SignatureFailed)?;
 
         // (21) Verify signedCount
         if device.count() != auth_data.count() {

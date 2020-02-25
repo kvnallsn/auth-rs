@@ -12,14 +12,14 @@ web = ["rocket"]
 
 [dependencies]
 base64 = "^0.11.0"
-rand = "^0.7.2"
-ring = "^0.13.2"
-rocket = { version = "^0.4.2", optional = true }
+rand = "^0.7.3"
+ring = "^0.16.0"
+rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "async", features = ["tls"], optional = true }
 serde = { version = "^1.0", default-features = false, features = ["derive"] }
-serde_bytes = "^0.11.2"
+serde_bytes = "^0.11.3"
 serde_cbor = "^0.10.2"
 serde_json = "^1.0"
-serde_repr = "^0.1.0"
-x509-parser = "^0.6.0"
-webpki = "^0.18.1"
-untrusted = "^0.6.2"
+serde_repr = "^0.1.5"
+x509-parser = "^0.6.2"
+webpki = "^0.21.2"
+untrusted = "^0.7.0"

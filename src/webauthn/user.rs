@@ -1,8 +1,11 @@
 //! Represents a user to be validated
 
 use serde::{Deserialize, Serialize};
+use crate::webauthn::Device;
 
 pub trait WebAuthnUser {
+    type Conn;
+
     /// User Handle (e.g., user id) that can uniquely identify a user in the service/api.
     /// Generally, this can be mapped to a primary key or similiar construct (e.g., uuid)
     fn id(&self) -> &[u8];
@@ -10,6 +13,12 @@ pub trait WebAuthnUser {
     /// A human-palatable or user-friednlt name for the user account, intended for
     /// display only. Should be selected by the user (e.g., username, email, etc.)
     fn name(&self) -> &str;
+
+    /// Loads all WebAuthn Devices associated with this user
+    /// 
+    /// # Arguments
+    /// * `conn` - Connection to wherever the devices are stored (SQL, Redis, etc.)
+    fn fetch_devices(&self, conn: &Self::Conn) -> Vec<Device>;
 
     /// Turns any trait implementing WebAuthnUser into a serialize struct
     /// that can be sent to a client WebAuthn implemenation
