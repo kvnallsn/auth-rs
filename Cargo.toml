@@ -10,16 +10,20 @@ edition = "2018"
 default = []
 password = ["rust-argon2"]
 webauthn = ["x509-parser", "webpki", "untrusted"]
+web-rocket = ["rocket"]
 
 [dependencies]
 base64 = "^0.11.0"
 rand = "^0.7.3"
 ring = "^0.16.0"
-rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "async", features = ["tls"] }
+rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "async", features = ["tls"], optional = true }
 serde = { version = "^1.0", default-features = false, features = ["derive"] }
-serde_bytes = "^0.11.3"
-serde_cbor = "^0.10.2"
 serde_json = "^1.0"
+log = "^0.4.8"
+
+# for COSE key
+serde_cbor = "^0.10.2"
+serde_bytes = "^0.11.3"
 serde_repr = "^0.1.5"
 
 # password dependances
