@@ -70,6 +70,7 @@
 //! }
 //! ```
 
+mod common;
 mod config;
 mod error;
 mod pk;
