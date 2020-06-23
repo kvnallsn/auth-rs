@@ -8,7 +8,7 @@ edition = "2018"
 
 [features]
 default = []
-google = ["jsonwebtoken", "reqwest", "pem"]
+google = ["jsonwebtoken", "reqwest", "pem", "chrono"]
 password = ["rust-argon2"]
 webauthn = ["x509-parser", "webpki", "untrusted", "serde_cbor", "serde_bytes", "serde_repr"]
 
@@ -23,9 +23,10 @@ log = "0.4.8"
 thiserror = "1"
 
 # google dependances
+chrono = { version = "0.4", optional = true }
 jsonwebtoken = { version = "7", optional = true }
-reqwest = { version = "0.10", features = ["blocking", "json"], optional = true }
 pem = { version = "0.8", optional = true }
+reqwest = { version = "0.10", features = ["blocking", "json"], optional = true }
 
 # password dependances
 rust-argon2 = { version = "0.8.1", optional = true }
