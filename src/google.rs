@@ -62,24 +62,46 @@ pub struct Profile {
 
 /// The response from Google with new keys
 #[derive(Deserialize, Debug)]
-pub struct Response {
+struct Response {
     pub keys: Vec<Jwk>,
 }
 
 #[derive(Clone)]
 pub struct GoogleAuth<S> {
-    store: Arc<RwLock<S>>,
-    expire: Arc<RwLock<Option<DateTime<Utc>>>>,
+    inner: Arc<RwLock<GoogleAuthInner<S>>>,
+}
+
+#[derive(Clone)]
+struct GoogleAuthInner<S> {
+    store: S,
+    expire: Option<DateTime<Utc>>,
+    validation: Validation
 }
 
 impl<S> GoogleAuth<S>
 where
     S: CertStore,
 {
-    pub fn new(store: S) -> GoogleAuth<S> {
+    pub fn new(store: S, client_id: impl Into<String>) -> GoogleAuth<S> {
+        // build the validation struct
+        let mut aud = HashSet::new();
+        aud.insert(client_id.into());
+
+        let validation = Validation {
+            leeway: 0,
+            validate_exp: true,
+            iss: Some("accounts.google.com".to_owned()),
+            aud: Some(aud),
+            algorithms: vec![Algorithm::RS256],
+            ..Default::default()
+        };
+
         GoogleAuth {
-            store: Arc::new(RwLock::new(store)),
-            expire: Arc::new(RwLock::new(Some(Utc::now()))),
+            inner: Arc::new(RwLock::new(GoogleAuthInner {
+                store,
+                expire: Some(Utc::now()),
+                validation,
+            }))
         }
     }
 
@@ -96,21 +118,21 @@ where
         if cache.max_age > 0 {
             // set the new expiration time
             if let Ok(duration) = Duration::from_std(std::time::Duration::from_secs(cache.max_age)) {
-                let mut expire = self.expire.write();
-                *expire = Some(Utc::now() + duration);
+                let mut inner = self.inner.write();
+                inner.expire = Some(Utc::now() + duration);
             }
         }
 
         let response = resp.json::<Response>().await?;
-        let mut store = self.store.write();
-        store.update(response.keys);
+        let mut inner = self.inner.write();
+        inner.store.update(response.keys);
         Ok(())
     }
 
     /// Returns true of the keys in this store are expired
     fn is_expired(&self) -> bool {
-        let expire = self.expire.read();
-        if let Some(expire) = *expire {
+        let inner = self.inner.read();
+        if let Some(expire) = inner.expire {
             Utc::now() > expire 
         } else {
             false
@@ -144,31 +166,14 @@ where
 
         // check if the store is expired
         if self.is_expired() {
-           self.fetch().await.unwrap();  
+            // if we don't have the request key, fetch them
+            self.fetch().await.map_err(|_| GoogleError::FetchKeysFailed)?;
         }
 
-        // if we don't have the request key, fetch them
-        let key;
-        {
-            let store = self.store.read();
-            key = store.get(&kid).ok_or_else(|| GoogleError::KeyNotFound)?;
-        }
+        let inner = self.inner.read();
+        let key = inner.store.get(&kid).ok_or_else(|| GoogleError::KeyNotFound)?;
 
-        let mut aud = HashSet::new();
-        aud.insert(
-            "561520225764-innm2teqdgtr60n6l1b9dknb261vml3e.apps.googleusercontent.com".to_owned(),
-        );
-
-        let validation = Validation {
-            leeway: 0,
-            validate_exp: true,
-            iss: Some("accounts.google.com".to_owned()),
-            aud: Some(aud),
-            algorithms: vec![Algorithm::RS256],
-            ..Default::default()
-        };
-
-        let profile: Profile = decode(token, &key, &validation)
+        let profile: Profile = decode(token, &key, &inner.validation)
             .map_err(|_| GoogleError::ValidationFailed)
             .map(|data| data.claims)?;
 

@@ -10,7 +10,7 @@ pub trait CertStore: Clone {
     fn update(&mut self, keys: Vec<Jwk>);
 
     /// Returns the key with the specified key id
-    fn get(&self, kid: impl AsRef<str>) -> Option<DecodingKey<'static>>;
+    fn get(&self, kid: impl AsRef<str>) -> Option<DecodingKey>;
 }
 
 /// A simple in-memory cert store
@@ -54,10 +54,10 @@ impl CertStore for MemoryCertStore {
     ///
     /// If the expiration time is set and in the past, then `get` will attempt
     /// to refresh the keys through a call to the Google endpoint
-    fn get(&self, kid: impl AsRef<str>) -> Option<DecodingKey<'static>> {
+    fn get(&self, kid: impl AsRef<str>) -> Option<DecodingKey> {
         self.store
             .get(kid.as_ref())
-            .map(|k| DecodingKey::from_rsa_components(&k.n, &k.e).into_static())
+            .map(|k| DecodingKey::from_rsa_components(&k.n, &k.e))
     }
 }
 
