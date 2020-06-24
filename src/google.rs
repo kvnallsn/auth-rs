@@ -3,11 +3,15 @@
 //! Source: [Google Sign-In for
 //! Websites](https://developers.google.com/identity/sign-in/web/sign-in)
 
+mod key;
+pub use key::*;
+
 mod store;
 pub use store::*;
 
+use chrono::{prelude::*, Duration};
 use jsonwebtoken::{decode, decode_header, Algorithm, Validation};
-use parking_lot::Mutex;
+use parking_lot::RwLock;
 use serde::Deserialize;
 use std::{collections::HashSet, default::Default, sync::Arc};
 
@@ -56,9 +60,16 @@ pub struct Profile {
     pub locale: String,
 }
 
+/// The response from Google with new keys
+#[derive(Deserialize, Debug)]
+pub struct Response {
+    pub keys: Vec<Jwk>,
+}
+
 #[derive(Clone)]
 pub struct GoogleAuth<S> {
-    store: Arc<Mutex<S>>,
+    store: Arc<RwLock<S>>,
+    expire: Arc<RwLock<Option<DateTime<Utc>>>>,
 }
 
 impl<S> GoogleAuth<S>
@@ -67,7 +78,42 @@ where
 {
     pub fn new(store: S) -> GoogleAuth<S> {
         GoogleAuth {
-            store: Arc::new(Mutex::new(store)),
+            store: Arc::new(RwLock::new(store)),
+            expire: Arc::new(RwLock::new(Some(Utc::now()))),
+        }
+    }
+
+    async fn fetch(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let resp = reqwest::get("https://www.googleapis.com/oauth2/v3/certs").await?;
+
+        // examine the `Cache-Control` header per Google documentation
+        let mut cache = CacheControl::new();
+        let headers = resp.headers().get_all(reqwest::header::CACHE_CONTROL);
+        for header in headers {
+            cache.update(header.to_str().unwrap());
+        }
+
+        if cache.max_age > 0 {
+            // set the new expiration time
+            if let Ok(duration) = Duration::from_std(std::time::Duration::from_secs(cache.max_age)) {
+                let mut expire = self.expire.write();
+                *expire = Some(Utc::now() + duration);
+            }
+        }
+
+        let response = resp.json::<Response>().await?;
+        let mut store = self.store.write();
+        store.update(response.keys);
+        Ok(())
+    }
+
+    /// Returns true of the keys in this store are expired
+    fn is_expired(&self) -> bool {
+        let expire = self.expire.read();
+        if let Some(expire) = *expire {
+            Utc::now() > expire 
+        } else {
+            false
         }
     }
 
@@ -75,7 +121,7 @@ where
     ///
     /// # Arguments
     /// * `token` - JWT token (as a base64-encoded string)
-    pub fn verify(&mut self, token: impl AsRef<str>) -> Result<Profile, GoogleError>
+    pub async fn verify(&mut self, token: impl AsRef<str>) -> Result<Profile, GoogleError>
     where
         S: CertStore,
     {
@@ -96,13 +142,15 @@ where
         // extract the key id used to sign this JWT
         let kid = header.kid.ok_or_else(|| GoogleError::MissingKeyId)?;
 
-        // see if we have the key stored in our cache
-        // TODO do this...
+        // check if the store is expired
+        if self.is_expired() {
+           self.fetch().await.unwrap();  
+        }
 
         // if we don't have the request key, fetch them
         let key;
         {
-            let mut store = self.store.lock();
+            let store = self.store.read();
             key = store.get(&kid).ok_or_else(|| GoogleError::KeyNotFound)?;
         }
 
