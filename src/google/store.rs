@@ -6,7 +6,7 @@ use serde::Deserialize;
 use std::{collections::HashMap, default::Default};
 
 /// A JSON Web Key, returned from Google and used to validate the JWT
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct Jwk {
     /// Key Id corresponding to this key
     pub kid: String,
@@ -100,12 +100,12 @@ pub struct Response {
     pub cache: CacheControl,
 }
 
-pub trait CertStore {
+pub trait CertStore: Clone {
     /// Handles updates from fetch
     fn refresh(&mut self);
 
     /// Returns the key with the specified key id
-    fn get(&mut self, kid: impl AsRef<str>) -> Option<DecodingKey>;
+    fn get(&mut self, kid: impl AsRef<str>) -> Option<DecodingKey<'static>>;
 
     /// Refreshes this store, adding new keys and removing old expired keys
     fn fetch() -> Result<Response, Box<dyn std::error::Error>> {
@@ -127,7 +127,7 @@ pub trait CertStore {
 ///
 /// For every instance of this created, each will independantly fetch and store the
 /// certificates returned in a Hashmap
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct MemoryCertStore {
     store: HashMap<String, Jwk>,
     expire: Option<DateTime<Utc>>,
@@ -176,7 +176,7 @@ impl CertStore for MemoryCertStore {
     ///
     /// If the expiration time is set and in the past, then `get` will attempt
     /// to refresh the keys through a call to the Google endpoint
-    fn get(&mut self, kid: impl AsRef<str>) -> Option<DecodingKey> {
+    fn get(&mut self, kid: impl AsRef<str>) -> Option<DecodingKey<'static>> {
         // check expiration, if expired, load new certs
         if let Some(expiration) = self.expire {
             if Utc::now() > expiration {
@@ -186,7 +186,7 @@ impl CertStore for MemoryCertStore {
 
         self.store
             .get(kid.as_ref())
-            .map(|k| DecodingKey::from_rsa_components(&k.n, &k.e))
+            .map(|k| DecodingKey::from_rsa_components(&k.n, &k.e).into_static())
     }
 }
 

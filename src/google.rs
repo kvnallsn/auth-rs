@@ -7,8 +7,9 @@ mod store;
 pub use store::*;
 
 use jsonwebtoken::{decode, decode_header, Algorithm, Validation};
+use parking_lot::Mutex;
 use serde::Deserialize;
-use std::{collections::HashSet, default::Default};
+use std::{collections::HashSet, default::Default, sync::Arc};
 
 const TYP_JWT: &str = "jwt";
 
@@ -55,69 +56,88 @@ pub struct Profile {
     pub locale: String,
 }
 
-/// Verifies a JWT token is valid
-///
-/// # Arguments
-/// * `token` - JWT token (as a base64-encoded string)
-pub fn verify<S>(token: impl AsRef<str>, store: &mut S) -> Result<Profile, GoogleError>
+pub struct GoogleAuth<S> {
+    store: Arc<Mutex<S>>,
+}
+
+impl<S> GoogleAuth<S>
 where
     S: CertStore,
 {
-    let token = token.as_ref();
-
-    // validate the header
-    // Requirements:
-    // * alg = RS256
-    // * kid = Corresponding key id
-    // * typ = JWT
-    let header = decode_header(token).map_err(|_| GoogleError::BadHeader)?;
-
-    // verify the type is JWT, fail if this header is missing
-    if header.typ.map(|typ| typ.to_ascii_lowercase()).as_deref() != Some(TYP_JWT) {
-        return Err(GoogleError::BadHeader);
+    pub fn new(store: S) -> GoogleAuth<S> {
+        GoogleAuth {
+            store: Arc::new(Mutex::new(store)),
+        }
     }
 
-    // extract the key id used to sign this JWT
-    let kid = header.kid.ok_or_else(|| GoogleError::MissingKeyId)?;
+    /// Verifies a JWT token is valid
+    ///
+    /// # Arguments
+    /// * `token` - JWT token (as a base64-encoded string)
+    pub fn verify(&mut self, token: impl AsRef<str>) -> Result<Profile, GoogleError>
+    where
+        S: CertStore,
+    {
+        let token = token.as_ref();
 
-    // see if we have the key stored in our cache
-    // TODO do this...
+        // validate the header
+        // Requirements:
+        // * alg = RS256
+        // * kid = Corresponding key id
+        // * typ = JWT
+        let header = decode_header(token).map_err(|_| GoogleError::BadHeader)?;
 
-    // if we don't have the request key, fetch them
-    let key = store.get(&kid).ok_or_else(|| GoogleError::KeyNotFound)?;
+        // verify the type is JWT, fail if this header is missing
+        if header.typ.map(|typ| typ.to_ascii_lowercase()).as_deref() != Some(TYP_JWT) {
+            return Err(GoogleError::BadHeader);
+        }
 
-    let mut aud = HashSet::new();
-    aud.insert(
-        "561520225764-innm2teqdgtr60n6l1b9dknb261vml3e.apps.googleusercontent.com".to_owned(),
-    );
+        // extract the key id used to sign this JWT
+        let kid = header.kid.ok_or_else(|| GoogleError::MissingKeyId)?;
 
-    let validation = Validation {
-        leeway: 0,
-        validate_exp: true,
-        iss: Some("accounts.google.com".to_owned()),
-        aud: Some(aud),
-        algorithms: vec![Algorithm::RS256],
-        ..Default::default()
-    };
+        // see if we have the key stored in our cache
+        // TODO do this...
 
-    let profile: Profile = decode(token, &key, &validation)
-        .map_err(|_| GoogleError::ValidationFailed)
-        .map(|data| data.claims)?;
+        // if we don't have the request key, fetch them
+        let key;
+        {
+            let mut store = self.store.lock();
+            key = store.get(&kid).ok_or_else(|| GoogleError::KeyNotFound)?;
+        }
 
-    // by default, the token is invalid
-    Ok(profile)
+        let mut aud = HashSet::new();
+        aud.insert(
+            "561520225764-innm2teqdgtr60n6l1b9dknb261vml3e.apps.googleusercontent.com".to_owned(),
+        );
+
+        let validation = Validation {
+            leeway: 0,
+            validate_exp: true,
+            iss: Some("accounts.google.com".to_owned()),
+            aud: Some(aud),
+            algorithms: vec![Algorithm::RS256],
+            ..Default::default()
+        };
+
+        let profile: Profile = decode(token, &key, &validation)
+            .map_err(|_| GoogleError::ValidationFailed)
+            .map(|data| data.claims)?;
+
+        // by default, the token is invalid
+        Ok(profile)
+    }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /*
     #[test]
     fn test_sign_in() {
         let token = "<SOME TOKEN HERE>";
         let profile = verify(token);
         assert!(profile.is_ok());
     }
-    */
 }
+*/

@@ -8,7 +8,7 @@ edition = "2018"
 
 [features]
 default = []
-google = ["jsonwebtoken", "reqwest", "pem", "chrono"]
+google = ["jsonwebtoken", "reqwest", "pem", "chrono", "parking_lot"]
 password = ["rust-argon2"]
 webauthn = ["x509-parser", "webpki", "untrusted", "serde_cbor", "serde_bytes", "serde_repr"]
 
@@ -26,6 +26,7 @@ thiserror = "1"
 chrono = { version = "0.4", optional = true }
 jsonwebtoken = { version = "7", optional = true }
 pem = { version = "0.8", optional = true }
+parking_lot = { version= "0.11", optional = true }
 reqwest = { version = "0.10", features = ["blocking", "json"], optional = true }
 
 # password dependances
