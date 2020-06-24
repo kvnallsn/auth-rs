@@ -56,6 +56,7 @@ pub struct Profile {
     pub locale: String,
 }
 
+#[derive(Clone)]
 pub struct GoogleAuth<S> {
     store: Arc<Mutex<S>>,
 }
