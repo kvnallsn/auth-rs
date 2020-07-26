@@ -3,3 +3,8 @@
 Cargo.lock
 test.json
 *.swp
+/docs/
+
+# Allow
+!/docs/doc/**
+!/docs/index.html

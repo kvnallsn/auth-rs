@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["auth_rs"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/std/error/trait.Error.html\" title=\"trait std::error::Error\">Error</a> for <a class=\"enum\" href=\"auth_rs/password/enum.HasherError.html\" title=\"enum auth_rs::password::HasherError\">HasherError</a>","synthetic":false,"types":["auth_rs::password::HasherError"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

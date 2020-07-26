@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Hasher",""],["HasherError",""],["Variant","The Argon2 variant."]]});
